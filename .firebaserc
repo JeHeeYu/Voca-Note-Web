@@ -1,3 +1,13 @@
 {
-  "projects": { "default": "voca-note-1068c" }
+  "projects": {
+    "default": "voca-note-1068c"
+  },
+  "targets": {
+    "voca-note-1068c": {
+      "hosting": {
+        "web": ["voca-note"],
+        "legacy": ["voca-note-1068c"]
+      }
+    }
+  }
 }

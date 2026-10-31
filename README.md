@@ -2,7 +2,9 @@
 
 앱에서 모은 단어와 복습 기록을 웹에서 이어가는 개인 영어 학습 공간입니다.
 
-**서비스:** https://voca-note-1068c.web.app
+**서비스:** https://voca-note.web.app
+
+기존 `voca-note-1068c.web.app` 주소는 같은 경로의 새 주소로 이동합니다. 새 주소에서는 Google 로그인이 한 번 다시 필요할 수 있습니다. Firebase 계정과 단어 데이터는 같은 프로젝트를 사용합니다.
 
 **저장소:** https://github.com/JeHeeYu/Voca-Note-Web
 
@@ -32,7 +34,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Google 로그인으로 로컬 확인할 때는 `http://localhost:5173`을 사용하세요. 현재 Firebase 승인 도메인은 `localhost`, `voca-note-1068c.web.app`, `voca-note-1068c.firebaseapp.com`입니다. 다른 주소는 Authentication의 Authorized domains에 추가해야 합니다.
+Google 로그인으로 로컬 확인할 때는 `http://localhost:5173`을 사용하세요. 현재 Firebase 승인 도메인은 `localhost`, `voca-note.web.app`, `voca-note.firebaseapp.com`, `voca-note-1068c.web.app`, `voca-note-1068c.firebaseapp.com`입니다. 다른 주소는 Authentication의 Authorized domains에 추가해야 합니다.
 
 Firebase 설정이 없어도 `먼저 둘러보기`를 통해 샘플 데이터로 화면을 확인할 수 있습니다. 체험 변경 사항은 이 브라우저의 `voca-note:demo:v1`에만 보관됩니다. 실제 계정으로 자동 업로드되지 않습니다.
 
@@ -98,6 +100,8 @@ GitHub Actions는 PR/main 변경 시 타입·lint·테스트·빌드와 에뮬�
 firebase login
 npm run deploy
 ```
+
+Hosting 대상은 `.firebaserc`의 `web`(새 사이트)과 `legacy`(기존 주소의 경로 유지 리다이렉트)입니다. `npm run deploy`는 두 대상을 함께 배포합니다. 새 사이트만 배포하려면 검증·빌드 후 `firebase deploy --only hosting:web --project voca-note-1068c`를 사용합니다.
 
 배포 전 웹 환경변수와 프로젝트 일치를 검사합니다. `dist`만 Hosting에 배포하며 SPA 경로 새로고침과 정적 파일 캐시를 설정합니다. `.env.local`, Firebase 로그인 정보, 서비스 계정 키는 커밋하지 않습니다. 웹 Firebase 설정은 번들에 포함되는 클라이언트 설정이며, 데이터 접근은 Authentication과 Firestore Rules로 제어됩니다.
 
