@@ -14,17 +14,29 @@ export default function ReviewQuestionCard({
   const { current, mode, revealed, feedback } = session
   const input = useRef<HTMLInputElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
+  const nextButton = useRef<HTMLButtonElement>(null)
+  const checked = Boolean(feedback)
   useEffect(() => {
-    if (mode === 'writing' || mode === 'listening') input.current?.focus()
+    if (checked) nextButton.current?.focus({ preventScroll: true })
+    else if (mode === 'writing' || mode === 'listening') input.current?.focus()
     else heading.current?.focus()
-  }, [current?.word.id, mode])
+  }, [current?.word.id, mode, checked])
   if (!current) return null
   const submit = (event: FormEvent) => {
     event.preventDefault()
     session.check()
   }
   return (
-    <div className="mx-auto max-w-[760px]">
+    <div
+      className="mx-auto max-w-[760px]"
+      onKeyDown={(event) => {
+        if (
+          event.key === 'Enter' &&
+          (event.repeat || event.nativeEvent.isComposing || event.keyCode === 229)
+        )
+          event.preventDefault()
+      }}
+    >
       <div className="mb-5 flex items-center justify-between">
         <p className="text-sm font-medium text-muted">{REVIEW_MODES[mode].label}</p>
         <span className="text-sm text-muted">
@@ -181,6 +193,7 @@ export default function ReviewQuestionCard({
         ) : feedback ? (
           <div className="border-t border-line bg-canvas/50 p-5">
             <button
+              ref={nextButton}
               onClick={() => session.next(feedback.correct)}
               className="btn btn-primary w-full"
             >
@@ -189,6 +202,12 @@ export default function ReviewQuestionCard({
                 : '다음 단어'}
               <ArrowRight size={16} />
             </button>
+            <p className="mt-3 text-center text-xs text-muted">
+              Enter를 누르면{' '}
+              {session.answers.length + 1 === session.questions.length
+                ? '학습을 마쳐요.'
+                : '다음 단어로 넘어가요.'}
+            </p>
           </div>
         ) : null}
       </section>

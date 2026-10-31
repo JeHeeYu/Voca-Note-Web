@@ -108,9 +108,10 @@ for (const mode of ['기억 카드', '뜻 고르기', '직접 쓰기', '듣고 �
           await page.getByRole('button', { name: '정답 확인', exact: true }).click()
         }
         await expect(page.getByText('정확해요. 잘 기억하고 있어요!')).toBeVisible()
-        await page
-          .getByRole('button', { name: i === 4 ? '학습 마치기' : '다음 단어', exact: true })
-          .click()
+        await expect(
+          page.getByRole('button', { name: i === 4 ? '학습 마치기' : '다음 단어', exact: true }),
+        ).toBeFocused()
+        await page.keyboard.press('Enter')
       }
     }
     await expect(page.getByRole('heading', { name: '오늘의 기억이 쌓였어요.' })).toBeVisible()
