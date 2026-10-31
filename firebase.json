@@ -49,6 +49,11 @@
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "redirects": [
         {
+          "source": "/",
+          "destination": "https://voca-note.web.app/",
+          "type": 301
+        },
+        {
           "source": "/:path*",
           "destination": "https://voca-note.web.app/:path",
           "type": 301
