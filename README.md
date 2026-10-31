@@ -8,7 +8,27 @@
 
 **저장소:** https://github.com/JeHeeYu/Voca-Note-Web
 
+**Android:** [앱 저장소 · v1.1.0](https://github.com/JeHeeYu/Voca-Note) · [변경 기록](CHANGELOG.md)
+
 React 19 · TypeScript · Vite · Tailwind CSS 4 · Pretendard · Zustand · Firebase Auth / Firestore / Hosting
+
+## 화면
+
+실제 웹 앱의 체험 모드를 촬영했습니다. 아래 화면은 샘플 데이터이며 개인 계정의 단어장을 사용하지 않습니다.
+
+| 오늘의 학습                                    | 나의 단어장                                            |
+| ---------------------------------------------- | ------------------------------------------------------ |
+| ![목표와 학습 통계](docs/screenshots/home.png) | ![단어 검색과 복습 상태](docs/screenshots/library.png) |
+
+### 뜻마다 품사, 원하는 방식으로 연습
+
+![여러 뜻과 명사·동사 품사를 각각 편집](docs/screenshots/meanings.png)
+
+![단일·일괄 진행 방식과 문제 수 설정](docs/screenshots/review-setup.png)
+
+| 모두 입력한 뒤 함께 확인                                | 정답과 오답 비교                                                      |
+| ------------------------------------------------------- | --------------------------------------------------------------------- |
+| ![그리드로 10문제 풀기](docs/screenshots/worksheet.png) | ![일괄 채점과 뜻별 답안 확인](docs/screenshots/worksheet-results.png) |
 
 ## 기능
 
@@ -79,9 +99,9 @@ users/{uid}/reviewSessions/{sessionId}
 
 복습 모드 값과 Timestamp 형식은 Android 앱과 동일합니다. 웹의 단어 뜻은 `meanings: { meaning: string, partOfSpeech: string | null }[]`를 기준으로 읽고 씁니다(1~10개, 뜻마다 300자). `meaning`과 `partOfSpeech` 단일 필드에도 첫 항목을 저장합니다. 기존 단일 뜻 문서는 한 항목으로 읽으며, 쉼표는 사용자가 ‘쉼표로 뜻 나누기’를 누를 때만 분리합니다. 배열이 있으면 단일 필드보다 우선합니다.
 
-품사는 기존 8개 값 외에 `phrase`, `phrasal_verb`, `idiom`, `abbreviation`을 지원합니다. Android의 여러 뜻 UI와 저장 로직은 후속 작업에서 같은 구조로 맞춥니다. 앱 업데이트 전에는 웹에서 추가한 전체 뜻을 앱에서 편집할 수 없습니다. 기존 `multipleChoiceCount` 설정도 읽고, 저장할 때 현재 형식으로 정리합니다. 복습 결과는 transaction으로 단어와 세션을 함께 저장합니다. 세션 ID를 유지해 네트워크 재시도가 중복 집계로 이어지지 않으며, 다른 기기에서 삭제된 단어가 있으면 세션 전체 저장을 중단합니다.
+품사는 기존 8개 값 외에 `phrase`, `phrasal_verb`, `idiom`, `abbreviation`을 지원합니다. Android 1.1.0부터 같은 구조로 여러 뜻을 읽고 편집합니다. 단일 뜻만 지원하는 구버전 앱은 1.1.0 이상으로 업데이트하세요. 기존 `multipleChoiceCount` 설정도 읽고, 저장할 때 현재 형식으로 정리합니다. 복습 결과는 transaction으로 단어와 세션을 함께 저장합니다. 세션 ID를 유지해 네트워크 재시도가 중복 집계로 이어지지 않으며, 다른 기기에서 삭제된 단어가 있으면 세션 전체 저장을 중단합니다.
 
-`firestore.rules`는 기존 문서를 허용하면서 `meanings`의 항목·길이·품사를 검사합니다. 사용자별 접근 제한은 유지합니다. 스키마 변경을 배포할 때는 검증 후 `firebase deploy --only firestore:rules --project voca-note-1068c`를 먼저 실행하고 Hosting을 배포하세요. 일반 Hosting 배포는 규칙을 변경하지 않습니다. Android 저장소 규칙은 앱 후속 작업에서 동기화해야 합니다.
+`firestore.rules`는 기존 문서를 허용하면서 `meanings`의 항목·길이·품사를 검사합니다. 사용자별 접근 제한은 유지합니다. 스키마 변경을 배포할 때는 검증 후 `firebase deploy --only firestore:rules --project voca-note-1068c`를 먼저 실행하고 Hosting을 배포하세요. 일반 Hosting 배포는 규칙을 변경하지 않습니다. Android 저장소의 규칙도 같은 내용으로 동기화되어 있습니다. 규칙을 수정하면 두 저장소를 함께 갱신하세요.
 
 ## 검증
 
@@ -107,6 +127,16 @@ npm run deploy
 Hosting 대상은 `.firebaserc`의 `web`(새 사이트)과 `legacy`(기존 주소의 경로 유지 리다이렉트)입니다. `npm run deploy`는 두 대상을 함께 배포합니다. 새 사이트만 배포하려면 검증·빌드 후 `firebase deploy --only hosting:web --project voca-note-1068c`를 사용합니다.
 
 배포 전 웹 환경변수와 프로젝트 일치를 검사합니다. `dist`만 Hosting에 배포하며 SPA 경로 새로고침과 정적 파일 캐시를 설정합니다. `.env.local`, Firebase 로그인 정보, 서비스 계정 키는 커밋하지 않습니다. 웹 Firebase 설정은 번들에 포함되는 클라이언트 설정이며, 데이터 접근은 Authentication과 Firestore Rules로 제어됩니다.
+
+## README 이미지 재생성
+
+```sh
+node scripts/capture-readme.mjs
+# 로컬 화면을 촬영하려면 개발 서버 실행 후:
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:5173 node scripts/capture-readme.mjs
+```
+
+새 Chrome 세션에서 체험 모드만 사용하고 `docs/screenshots/`에 PNG 6개를 저장합니다. 로그인 정보와 실제 계정 데이터는 사용하지 않습니다. 코드 변경이 없는 문서·이미지 갱신에는 Hosting 재배포가 필요하지 않습니다.
 
 ## 참고
 
