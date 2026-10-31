@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises'
 
 // Fresh browser + demo repository only: never reads or writes an authenticated account.
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'https://voca-note.web.app'
+const selectedScreens = new Set(process.argv.slice(2))
 const output = new URL('../docs/screenshots/', import.meta.url).pathname
 await mkdir(output, { recursive: true })
 const browser = await chromium.launch({ channel: process.env.CI ? 'chromium' : 'chrome' })
@@ -20,6 +21,7 @@ try {
       .getByRole('link', { name })
       .click()
   const capture = async (name) => {
+    if (selectedScreens.size && !selectedScreens.has(name)) return
     await page.evaluate(() => document.fonts.ready)
     const close = page.getByRole('button', { name: '알림 닫기' })
     if (await close.isVisible()) await close.click()
@@ -54,7 +56,6 @@ try {
   await page.getByRole('button', { name: '10문제', exact: true }).click()
   await capture('review-setup')
   await page.getByRole('button', { name: '연습 시작하기' }).click()
-  await page.getByRole('button', { name: '그리드', exact: true }).click()
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('voca-note:demo:v1')))
   const byMeaning = new Map(
     stored.words.flatMap((word) =>
@@ -75,7 +76,7 @@ try {
   await page.getByRole('button', { name: '전체 정답 확인', exact: true }).click()
   await page.getByText('학습 기록과 다음 복습 시간을 저장했어요.').waitFor()
   await capture('worksheet-results')
-  console.log(`Saved six demo screenshots to ${output}`)
+  console.log(`Saved demo screenshots to ${output}`)
 } finally {
   await browser.close()
 }

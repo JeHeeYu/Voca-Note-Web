@@ -15,7 +15,6 @@ export default function BatchReviewQuestion({
   graded,
   correct,
   missing,
-  layout,
 }: {
   question: ReviewQuestion
   index: number
@@ -26,7 +25,6 @@ export default function BatchReviewQuestion({
   graded: boolean
   correct: boolean
   missing: boolean
-  layout: 'list' | 'grid'
 }) {
   const inputId = `batch-answer-${index}`
   const errorId = `batch-error-${index}`
@@ -53,7 +51,7 @@ export default function BatchReviewQuestion({
           </span>
         ) : null}
       </div>
-      <div className={`grid gap-5 ${layout === 'list' ? 'sm:grid-cols-2 sm:items-start' : ''}`}>
+      <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
         <div className="min-w-0">
           <h2 className="break-words text-lg font-semibold leading-7">{question.prompt}</h2>
           {mode === 'listening' ? (

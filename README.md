@@ -8,7 +8,7 @@
 
 **저장소:** https://github.com/JeHeeYu/Voca-Note-Web
 
-**Android:** [앱 저장소 · v1.1.0](https://github.com/JeHeeYu/Voca-Note) · [변경 기록](CHANGELOG.md)
+**Android:** [앱 저장소 · v1.1.1](https://github.com/JeHeeYu/Voca-Note) · [변경 기록](CHANGELOG.md)
 
 React 19 · TypeScript · Vite · Tailwind CSS 4 · Pretendard · Zustand · Firebase Auth / Firestore / Hosting
 
@@ -26,9 +26,9 @@ React 19 · TypeScript · Vite · Tailwind CSS 4 · Pretendard · Zustand · Fir
 
 ![단일·일괄 진행 방식과 문제 수 설정](docs/screenshots/review-setup.png)
 
-| 모두 입력한 뒤 함께 확인                                | 정답과 오답 비교                                                      |
-| ------------------------------------------------------- | --------------------------------------------------------------------- |
-| ![그리드로 10문제 풀기](docs/screenshots/worksheet.png) | ![일괄 채점과 뜻별 답안 확인](docs/screenshots/worksheet-results.png) |
+| 모두 입력한 뒤 함께 확인                                            | 정답과 오답 비교                                                      |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| ![10문제 연속 입력 후 한 번에 채점](docs/screenshots/worksheet.png) | ![일괄 채점과 뜻별 답안 확인](docs/screenshots/worksheet-results.png) |
 
 ## 기능
 
@@ -39,7 +39,7 @@ React 19 · TypeScript · Vite · Tailwind CSS 4 · Pretendard · Zustand · Fir
 - 단어·뜻·품사·예문·연관어 검색, 오늘 복습/오답 필터, 최근/알파벳/우선순 정렬
 - 기억 카드에서 모든 뜻 확인, 뜻별 품사를 반영한 뜻 고르기·직접 쓰기, 듣고 쓰기, 오답 재연습
 - 정답 확인 후 Enter로 다음 단어 진행, 한 번에 풀기(뜻 고르기·직접 쓰기·듣고 쓰기)
-- 연습 화면에서 5~30문제 선택, 리스트·그리드 전환, 전체 입력 후 일괄 채점·답안 비교·오답 재연습
+- 연습 화면에서 5~30문제 선택, 세로로 이어지는 문제에 전체 입력 후 일괄 채점·답안 비교·오답 재연습
 - 전체 단어는 등록 시점·정답률·복습 예정일에 관계없이 같은 확률로 무작위 출제, 오늘 복습·오답 노트는 해당 범위의 복습 우선순위 유지
 - 앱과 같은 간격 반복: 정답 `1일 → 3일 → 2배(최대 180일)`, 오답 `10분`
 - 반응형 화면, 키보드 접근·입력 오류 안내·화면 이탈 경고, 기기 TTS

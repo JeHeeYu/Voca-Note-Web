@@ -74,7 +74,7 @@ test('Enter checks, then advances once; held and composing Enter never skip a qu
   await expect(page.getByLabel('영어 단어 입력')).toHaveValue('')
 })
 
-test('ten-question worksheet validates blanks, preserves list/grid answers, grades once, and retries mistakes', async ({
+test('ten-question worksheet validates blanks, preserves answers on mobile, grades once, and retries mistakes', async ({
   page,
 }) => {
   await setup(page)
@@ -105,15 +105,24 @@ test('ten-question worksheet validates blanks, preserves list/grid answers, grad
   }
   await expect(page.getByRole('button', { name: '전체 정답 확인', exact: true })).toBeFocused()
   await expect(page.getByRole('list', { name: '단어의 뜻' })).toHaveCount(0)
-  await page.getByRole('button', { name: '그리드', exact: true }).click()
+  await expect(page.getByRole('group', { name: '문제 배치' })).toHaveCount(0)
+  const positions = await cards.evaluateAll((cards) =>
+    cards.map((card) => {
+      const { top, bottom } = card.getBoundingClientRect()
+      return { top, bottom }
+    }),
+  )
+  for (let index = 1; index < positions.length; index++) {
+    expect(positions[index].top).toBeGreaterThan(positions[index - 1].bottom)
+  }
   await expect(page.getByLabel('1번 답', { exact: true })).toHaveValue('wrong')
   await page.evaluate(() => scrollTo(0, 0))
-  await page.screenshot({ path: 'test-results/worksheet-grid.png', fullPage: false })
+  await page.screenshot({ path: 'test-results/worksheet-desktop.png', fullPage: false })
   await page.setViewportSize({ width: 390, height: 844 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: 'test-results/worksheet-mobile.png', fullPage: false })
   await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.getByRole('button', { name: '리스트', exact: true }).click()
+  await expect(page.getByLabel('1번 답', { exact: true })).toHaveValue('wrong')
   await page.getByRole('button', { name: '전체 정답 확인', exact: true }).evaluate((button) => {
     ;(button as HTMLButtonElement).click()
     ;(button as HTMLButtonElement).click()
