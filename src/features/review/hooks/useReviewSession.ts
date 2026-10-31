@@ -24,30 +24,80 @@ export function useReviewSession() {
   const start = (pool: SavedWord[], targets: SavedWord[], nextMode: ReviewMode, count: number) => {
     const next = buildQuestions(pool, nextMode, count, Date.now(), Math.random, targets)
     if (!next.length) return
-    sessionId.current = crypto.randomUUID(); answeredQuestionId.current = ''; allowLeave.current = false
-    setQuestions(next); setMode(nextMode); setAnswers([]); setInput(''); setFeedback(null); setRevealed(false)
-    setSaved(false); setError(''); setPhase('active')
+    sessionId.current = crypto.randomUUID()
+    answeredQuestionId.current = ''
+    allowLeave.current = false
+    setQuestions(next)
+    setMode(nextMode)
+    setAnswers([])
+    setInput('')
+    setFeedback(null)
+    setRevealed(false)
+    setSaved(false)
+    setError('')
+    setPhase('active')
   }
   const save = async (results: ReviewAnswer[]) => {
     if (saveLock.current || saved) return
     const repository = useVocaStore.getState().repository
-    if (!repository) { setError('계정 연결을 확인하고 다시 저장해 주세요.'); return }
-    saveLock.current = true; setSaving(true); setError('')
-    try { await repository.saveSession(sessionId.current, mode, results); setSaved(true); allowLeave.current = true }
-    catch (cause) { setError(errorMessage(cause)) }
-    finally { saveLock.current = false; setSaving(false) }
+    if (!repository) {
+      setError('계정 연결을 확인하고 다시 저장해 주세요.')
+      return
+    }
+    saveLock.current = true
+    setSaving(true)
+    setError('')
+    try {
+      await repository.saveSession(sessionId.current, mode, results)
+      setSaved(true)
+      allowLeave.current = true
+    } catch (cause) {
+      setError(errorMessage(cause))
+    } finally {
+      saveLock.current = false
+      setSaving(false)
+    }
   }
   const next = (correct: boolean) => {
     if (!current || answeredQuestionId.current === current.word.id) return
     answeredQuestionId.current = current.word.id
     const results = [...answers, { wordId: current.word.id, isCorrect: correct }]
-    setAnswers(results); setInput(''); setFeedback(null); setRevealed(false)
-    if (results.length === questions.length) { setPhase('finished'); void save(results) }
+    setAnswers(results)
+    setInput('')
+    setFeedback(null)
+    setRevealed(false)
+    if (results.length === questions.length) {
+      setPhase('finished')
+      void save(results)
+    }
   }
   const check = (value = input) => {
     if (feedback || !current || !value.trim()) return
-    setInput(value); setFeedback({ correct: answersMatch(value, current.answer), input: value }); setRevealed(true)
+    setInput(value)
+    setFeedback({ correct: answersMatch(value, current.answer), input: value })
+    setRevealed(true)
   }
   const incorrectIds = answers.filter((answer) => !answer.isCorrect).map((answer) => answer.wordId)
-  return { mode, phase, questions, current, answers, input, setInput, revealed, reveal: () => setRevealed(true), feedback, check, next, start, saving, saved, error, retrySave: () => save(answers), incorrectIds, allowLeave, reset: () => setPhase('setup') }
+  return {
+    mode,
+    phase,
+    questions,
+    current,
+    answers,
+    input,
+    setInput,
+    revealed,
+    reveal: () => setRevealed(true),
+    feedback,
+    check,
+    next,
+    start,
+    saving,
+    saved,
+    error,
+    retrySave: () => save(answers),
+    incorrectIds,
+    allowLeave,
+    reset: () => setPhase('setup'),
+  }
 }

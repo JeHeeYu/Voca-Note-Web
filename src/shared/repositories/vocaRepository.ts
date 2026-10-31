@@ -1,4 +1,9 @@
-import type { ReviewAnswer, ReviewMode, ReviewSession, ReviewSettings } from '@/shared/models/review'
+import type {
+  ReviewAnswer,
+  ReviewMode,
+  ReviewSession,
+  ReviewSettings,
+} from '@/shared/models/review'
 import type { SavedWord, WordDraft } from '@/shared/models/word'
 
 export interface VocaSnapshot {

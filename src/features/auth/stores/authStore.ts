@@ -11,7 +11,10 @@ interface AuthState {
   leaveDemo: () => void
 }
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null, ready: false, demo: false, error: null,
+  user: null,
+  ready: false,
+  demo: false,
+  error: null,
   setUser: (user) => set({ user, ready: true, demo: false, error: null }),
   enterDemo: () => set({ demo: true, ready: true, error: null }),
   leaveDemo: () => set({ demo: false }),

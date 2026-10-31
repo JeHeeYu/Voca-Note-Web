@@ -13,12 +13,177 @@ export default function LibraryPage() {
   const words = useVocaStore((state) => state.words)
   const now = useNow()
   const library = useLibrary(words, now)
-  const filters: { id: WordFilter; label: string; count: number }[] = [{ id: 'all', label: '전체 단어', count: words.length }, { id: 'due', label: '오늘 복습', count: words.filter((w) => isDue(w, now)).length }, { id: 'mistakes', label: '오답 노트', count: words.filter(needsPractice).length }]
-  return <><PageHeader eyebrow="My vocabulary" title="나만의 단어가 모이는 곳." description="오늘 만난 표현부터 다시 보고 싶은 단어까지, 한곳에 담아두세요." action={<AddWordLink />} />
-    <div className="card overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-4 border-b border-line px-5 pt-5 sm:px-6"><div className="flex gap-5" role="group" aria-label="단어 필터">{filters.map((filter) => <button key={filter.id} aria-pressed={library.filter === filter.id} onClick={() => library.setFilter(filter.id)} className={`border-b-2 pb-4 text-sm font-medium ${library.filter === filter.id ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-ink'}`}>{filter.label}<span className={`ml-1.5 rounded px-1.5 py-0.5 text-[10px] ${library.filter === filter.id ? 'bg-brand-soft' : 'bg-canvas'}`}>{filter.count}</span></button>)}</div></div>
-      <div className="flex flex-wrap gap-3 p-5 sm:px-6"><div className="relative min-w-0 flex-1"><Search size={17} className="absolute top-3.5 left-3.5 text-muted" /><input aria-label="단어 검색" value={library.search} onChange={(event) => library.setSearch(event.target.value)} className="field pl-10" placeholder="단어, 뜻, 예문, 연관어를 검색하세요" /></div><select aria-label="정렬 기준" value={library.sort} onChange={(event) => library.setSort(event.target.value)} className="field w-auto"><option value="recent">최근 추가순</option><option value="alphabet">알파벳순</option><option value="priority">학습 우선순</option></select></div>
-      <p className="px-6 pb-4 text-xs text-muted" aria-live="polite">{library.filtered.length}개의 단어</p>
-      {library.visible.length ? <><div className="hidden grid-cols-[1.25fr_1.4fr_1fr_88px] gap-3 border-y border-line bg-canvas/70 px-6 py-3 text-[11px] font-medium text-muted sm:grid"><span>단어 / 품사</span><span>뜻 / 예문</span><span>학습 상태</span><span className="text-right">상세</span></div><div>{library.visible.map((word) => <div key={word.id} className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-line px-5 py-5 last:border-0 sm:grid-cols-[1.25fr_1.4fr_1fr_88px] sm:px-6"><div className="min-w-0"><Link to={`/words/${word.id}`} className="break-words text-base font-semibold hover:text-brand">{word.word}</Link><div className="mt-1 text-[11px] text-muted">{word.partOfSpeech ? PARTS_OF_SPEECH[word.partOfSpeech] : '품사 미지정'}</div><p className="mt-2 text-sm text-muted sm:hidden">{word.meaning}</p></div><div className="hidden min-w-0 sm:block"><p className="text-sm">{word.meaning}</p>{word.example ? <p className="mt-1 truncate text-xs text-muted">{word.example}</p> : null}</div><div className="hidden sm:block"><span className={`inline-flex rounded-md px-2 py-1 text-[10px] font-medium ${!word.lastReviewedAt ? 'bg-[#edf0f7] text-[#7b84a0]' : isDue(word, now) ? 'bg-brand-soft text-brand' : 'bg-canvas text-muted'}`}>{!word.lastReviewedAt ? '새 단어' : isDue(word, now) ? '복습할 시간' : '기억하는 중'}</span><p className="mt-1.5 text-[10px] text-muted">{word.nextReviewAt ? `다음 복습 ${new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(word.nextReviewAt)}` : '첫 연습을 기다려요'}</p></div><div className="flex items-center justify-end"><SpeakButton text={word.word} /><Link to={`/words/${word.id}`} className="btn btn-quiet px-2" aria-label={`${word.word} 상세 보기`}><ArrowUpRight size={18} /></Link></div></div>)}</div></> : <EmptyState title={words.length ? '찾는 단어가 없어요.' : '첫 단어를 기다리고 있어요.'} description={words.length ? '검색어나 필터를 바꿔보세요.' : '직접 만난 영어 단어를 기록하고, 나만의 학습을 시작해보세요.'} action={words.length ? <button className="btn btn-secondary" onClick={() => { library.setSearch(''); library.setFilter('all') }}>전체 단어 보기</button> : <AddWordLink />} />}
-      {library.totalPages > 1 ? <div className="flex items-center justify-between border-t border-line px-6 py-4"><p className="text-xs text-muted">{library.page} / {library.totalPages} 페이지</p><div className="flex gap-2"><button className="btn btn-secondary px-3" aria-label="이전 페이지" disabled={library.page === 1} onClick={() => library.setPage(library.page - 1)}><ChevronLeft size={17} /></button><button className="btn btn-secondary px-3" aria-label="다음 페이지" disabled={library.page === library.totalPages} onClick={() => library.setPage(library.page + 1)}><ChevronRight size={17} /></button></div></div> : null}
-    </div></>
+  const filters: { id: WordFilter; label: string; count: number }[] = [
+    { id: 'all', label: '전체 단어', count: words.length },
+    { id: 'due', label: '오늘 복습', count: words.filter((w) => isDue(w, now)).length },
+    { id: 'mistakes', label: '오답 노트', count: words.filter(needsPractice).length },
+  ]
+  return (
+    <>
+      <PageHeader
+        eyebrow="My vocabulary"
+        title="나만의 단어가 모이는 곳."
+        description="오늘 만난 표현부터 다시 보고 싶은 단어까지, 한곳에 담아두세요."
+        action={<AddWordLink />}
+      />
+      <div className="card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line px-5 pt-5 sm:px-6">
+          <div className="flex gap-5" role="group" aria-label="단어 필터">
+            {filters.map((filter) => (
+              <button
+                key={filter.id}
+                aria-pressed={library.filter === filter.id}
+                onClick={() => library.setFilter(filter.id)}
+                className={`border-b-2 pb-4 text-sm font-medium ${library.filter === filter.id ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-ink'}`}
+              >
+                {filter.label}
+                <span
+                  className={`ml-1.5 rounded px-1.5 py-0.5 text-[10px] ${library.filter === filter.id ? 'bg-brand-soft' : 'bg-canvas'}`}
+                >
+                  {filter.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-3 p-5 sm:px-6">
+          <div className="relative min-w-0 flex-1">
+            <Search size={17} className="absolute top-3.5 left-3.5 text-muted" />
+            <input
+              aria-label="단어 검색"
+              value={library.search}
+              onChange={(event) => library.setSearch(event.target.value)}
+              className="field pl-10"
+              placeholder="단어, 뜻, 예문, 연관어를 검색하세요"
+            />
+          </div>
+          <select
+            aria-label="정렬 기준"
+            value={library.sort}
+            onChange={(event) => library.setSort(event.target.value)}
+            className="field w-auto"
+          >
+            <option value="recent">최근 추가순</option>
+            <option value="alphabet">알파벳순</option>
+            <option value="priority">학습 우선순</option>
+          </select>
+        </div>
+        <p className="px-6 pb-4 text-xs text-muted" aria-live="polite">
+          {library.filtered.length}개의 단어
+        </p>
+        {library.visible.length ? (
+          <>
+            <div className="hidden grid-cols-[1.25fr_1.4fr_1fr_88px] gap-3 border-y border-line bg-canvas/70 px-6 py-3 text-[11px] font-medium text-muted sm:grid">
+              <span>단어 / 품사</span>
+              <span>뜻 / 예문</span>
+              <span>학습 상태</span>
+              <span className="text-right">상세</span>
+            </div>
+            <div>
+              {library.visible.map((word) => (
+                <div
+                  key={word.id}
+                  className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-line px-5 py-5 last:border-0 sm:grid-cols-[1.25fr_1.4fr_1fr_88px] sm:px-6"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      to={`/words/${word.id}`}
+                      className="break-words text-base font-semibold hover:text-brand"
+                    >
+                      {word.word}
+                    </Link>
+                    <div className="mt-1 text-[11px] text-muted">
+                      {word.partOfSpeech ? PARTS_OF_SPEECH[word.partOfSpeech] : '품사 미지정'}
+                    </div>
+                    <p className="mt-2 text-sm text-muted sm:hidden">{word.meaning}</p>
+                  </div>
+                  <div className="hidden min-w-0 sm:block">
+                    <p className="text-sm">{word.meaning}</p>
+                    {word.example ? (
+                      <p className="mt-1 truncate text-xs text-muted">{word.example}</p>
+                    ) : null}
+                  </div>
+                  <div className="hidden sm:block">
+                    <span
+                      className={`inline-flex rounded-md px-2 py-1 text-[10px] font-medium ${!word.lastReviewedAt ? 'bg-[#edf0f7] text-[#7b84a0]' : isDue(word, now) ? 'bg-brand-soft text-brand' : 'bg-canvas text-muted'}`}
+                    >
+                      {!word.lastReviewedAt
+                        ? '새 단어'
+                        : isDue(word, now)
+                          ? '복습할 시간'
+                          : '기억하는 중'}
+                    </span>
+                    <p className="mt-1.5 text-[10px] text-muted">
+                      {word.nextReviewAt
+                        ? `다음 복습 ${new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(word.nextReviewAt)}`
+                        : '첫 연습을 기다려요'}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-end">
+                    <SpeakButton text={word.word} />
+                    <Link
+                      to={`/words/${word.id}`}
+                      className="btn btn-quiet px-2"
+                      aria-label={`${word.word} 상세 보기`}
+                    >
+                      <ArrowUpRight size={18} />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <EmptyState
+            title={words.length ? '찾는 단어가 없어요.' : '첫 단어를 기다리고 있어요.'}
+            description={
+              words.length
+                ? '검색어나 필터를 바꿔보세요.'
+                : '직접 만난 영어 단어를 기록하고, 나만의 학습을 시작해보세요.'
+            }
+            action={
+              words.length ? (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    library.setSearch('')
+                    library.setFilter('all')
+                  }}
+                >
+                  전체 단어 보기
+                </button>
+              ) : (
+                <AddWordLink />
+              )
+            }
+          />
+        )}
+        {library.totalPages > 1 ? (
+          <div className="flex items-center justify-between border-t border-line px-6 py-4">
+            <p className="text-xs text-muted">
+              {library.page} / {library.totalPages} 페이지
+            </p>
+            <div className="flex gap-2">
+              <button
+                className="btn btn-secondary px-3"
+                aria-label="이전 페이지"
+                disabled={library.page === 1}
+                onClick={() => library.setPage(library.page - 1)}
+              >
+                <ChevronLeft size={17} />
+              </button>
+              <button
+                className="btn btn-secondary px-3"
+                aria-label="다음 페이지"
+                disabled={library.page === library.totalPages}
+                onClick={() => library.setPage(library.page + 1)}
+              >
+                <ChevronRight size={17} />
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </>
+  )
 }

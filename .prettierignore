@@ -1,0 +1,11 @@
+node_modules
+dist
+package-lock.json
+.firebase
+coverage
+test-results
+playwright-report
+*.log
+.env*
+src/assets/fonts
+firestore.rules

@@ -1,7 +1,7 @@
 {
   "name": "voca-note",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,9 +9,14 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "test": "vitest run --exclude \"tests/integration/**\"",
-    "test:watch": "vitest",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
+    "test": "vitest run tests/unit",
+    "test:watch": "vitest tests/unit",
+    "check": "npm run format:check && npm run typecheck && npm run lint && npm run test && npm run build",
+    "test:integration": "firebase emulators:exec --only firestore --project demo-voca-note \"vitest run tests/integration --testTimeout=15000 --hookTimeout=20000\"",
+    "test:e2e": "playwright test",
+    "deploy": "node scripts/check-firebase-env.mjs && npm run check && firebase deploy --only hosting --project voca-note-1068c",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "firebase": "13.1.0",
@@ -22,24 +27,30 @@
     "zustand": "5.0.16"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
+    "@eslint/js": "10.0.1",
     "@firebase/rules-unit-testing": "6.0.0",
+    "@playwright/test": "1.64.1",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
-    "eslint": "^9.39.1",
+    "eslint": "10.14.0",
     "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
+    "eslint-plugin-react-refresh": "0.5.7",
     "globals": "^16.5.0",
+    "prettier": "3.9.10",
     "tailwindcss": "4.3.3",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.46.4",
+    "typescript-eslint": "8.72.1",
     "vite": "^7.2.4",
     "vitest": "4.1.12"
   },
   "engines": {
     "node": ">=22.12.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.7",
+    "minimatch": "11.0.3"
   }
 }

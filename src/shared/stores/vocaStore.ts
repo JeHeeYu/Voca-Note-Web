@@ -8,6 +8,16 @@ interface VocaState extends VocaSnapshot {
   error: string | null
   toast: string | null
 }
-export const emptyVocaState = { words: [], settings: DEFAULT_SETTINGS, sessions: [], pending: false, fromCache: false, repository: null, loading: true, error: null, toast: null }
+export const emptyVocaState = {
+  words: [],
+  settings: DEFAULT_SETTINGS,
+  sessions: [],
+  pending: false,
+  fromCache: false,
+  repository: null,
+  loading: true,
+  error: null,
+  toast: null,
+}
 export const useVocaStore = create<VocaState>(() => emptyVocaState)
 export const notify = (toast: string) => useVocaStore.setState({ toast })
