@@ -6,7 +6,9 @@ import {
   type PartOfSpeech,
   type SavedWord,
 } from '@/shared/models/word'
-import type { ReviewMode } from '@/shared/models/review'
+import type { ReviewAnswer, ReviewMode } from '@/shared/models/review'
+
+export type ReviewPresentation = 'single' | 'batch'
 
 export interface ReviewQuestion {
   word: SavedWord
@@ -18,6 +20,17 @@ export interface ReviewQuestion {
 }
 export const answersMatch = (input: string, answer: string) =>
   input.trim().toLowerCase() === answer.trim().toLowerCase()
+
+export function gradeBatch(
+  questions: ReviewQuestion[],
+  inputs: Record<string, string>,
+): ReviewAnswer[] | null {
+  if (!questions.length || questions.some(({ word }) => !inputs[word.id]?.trim())) return null
+  return questions.map(({ word, answer }) => ({
+    wordId: word.id,
+    isCorrect: answersMatch(inputs[word.id], answer),
+  }))
+}
 
 function distractorsFor(word: SavedWord, words: SavedWord[]) {
   const own = new Set(wordMeanings(word).map((entry) => entry.meaning.trim().toLowerCase()))

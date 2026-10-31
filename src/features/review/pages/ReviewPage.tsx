@@ -3,6 +3,7 @@ import LeaveGuard from '@/shared/components/LeaveGuard'
 import ReviewSetup from '../components/ReviewSetup'
 import ReviewQuestionCard from '../components/ReviewQuestionCard'
 import ReviewResult from '../components/ReviewResult'
+import BatchReview from '../components/BatchReview'
 import { useReviewSession } from '../hooks/useReviewSession'
 
 export default function ReviewPage() {
@@ -15,6 +16,9 @@ export default function ReviewPage() {
     <>
       {session.phase === 'setup' ? (
         <ReviewSetup key={scope} scope={scope} onStart={session.start} />
+      ) : session.phase === 'graded' ||
+        (session.phase === 'active' && session.presentation === 'batch') ? (
+        <BatchReview session={session} />
       ) : session.phase === 'active' ? (
         <ReviewQuestionCard session={session} />
       ) : (

@@ -11,7 +11,7 @@ import {
 import { normalizeSettings, type ReviewSession } from '@/shared/models/review'
 import { DAY_MS, scheduleReview, studyStats } from '@/shared/models/study'
 import { validateWord } from '@/features/editor/models/wordValidation'
-import { answersMatch, buildQuestions } from '@/features/review/models/reviewEngine'
+import { answersMatch, buildQuestions, gradeBatch } from '@/features/review/models/reviewEngine'
 import { decodeWord } from '@/shared/repositories/firestoreVocaRepository'
 import { Timestamp } from 'firebase/firestore'
 import { errorMessage } from '@/shared/lib/errors'
@@ -157,6 +157,27 @@ describe('four review modes', () => {
     word({ id: 'four', word: 'read', meaning: '읽다' }),
     word({ id: 'same', word: 'concentrate', meaning: '집중하다' }),
   ]
+  it('grades a complete worksheet in question order with trimmed, case-insensitive answers', () => {
+    const questions = buildQuestions(pool, 'writing', 3, now, () => 0)
+    const inputs = Object.fromEntries(
+      questions.map((q) => [q.word.id, ` ${q.answer.toUpperCase()} `]),
+    )
+    inputs[questions[1].word.id] = 'wrong'
+    expect(gradeBatch(questions, inputs)).toEqual(
+      questions.map((q, index) => ({ wordId: q.word.id, isCorrect: index !== 1 })),
+    )
+  })
+  it('does not grade a partial or whitespace-only worksheet', () => {
+    const questions = buildQuestions(pool, 'writing', 2, now, () => 0)
+    expect(gradeBatch([], {})).toBeNull()
+    expect(gradeBatch(questions, { [questions[0].word.id]: questions[0].answer })).toBeNull()
+    expect(
+      gradeBatch(questions, {
+        [questions[0].word.id]: questions[0].answer,
+        [questions[1].word.id]: '  ',
+      }),
+    ).toBeNull()
+  })
   it('prioritizes due words and selects a unique set of distractors', () => {
     const targets = [
       word({ id: 'later', nextReviewAt: now + DAY_MS }),

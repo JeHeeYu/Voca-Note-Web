@@ -3,13 +3,21 @@ import type { ReviewAnswer, ReviewMode } from '@/shared/models/review'
 import type { SavedWord } from '@/shared/models/word'
 import { useVocaStore } from '@/shared/stores/vocaStore'
 import { errorMessage } from '@/shared/lib/errors'
-import { answersMatch, buildQuestions, type ReviewQuestion } from '../models/reviewEngine'
+import {
+  answersMatch,
+  buildQuestions,
+  gradeBatch,
+  type ReviewPresentation,
+  type ReviewQuestion,
+} from '../models/reviewEngine'
 
 export function useReviewSession() {
   const [questions, setQuestions] = useState<ReviewQuestion[]>([])
   const [mode, setMode] = useState<ReviewMode>('recall')
+  const [presentation, setPresentation] = useState<ReviewPresentation>('single')
+  const [batchInputs, setBatchInputs] = useState<Record<string, string>>({})
   const [answers, setAnswers] = useState<ReviewAnswer[]>([])
-  const [phase, setPhase] = useState<'setup' | 'active' | 'finished'>('setup')
+  const [phase, setPhase] = useState<'setup' | 'active' | 'graded' | 'finished'>('setup')
   const [revealed, setRevealed] = useState(false)
   const [feedback, setFeedback] = useState<{ correct: boolean; input: string } | null>(null)
   const [input, setInput] = useState('')
@@ -19,16 +27,26 @@ export function useReviewSession() {
   const sessionId = useRef('')
   const saveLock = useRef(false)
   const answeredQuestionId = useRef('')
+  const batchGraded = useRef(false)
   const allowLeave = useRef(false)
   const current = questions[answers.length]
-  const start = (pool: SavedWord[], targets: SavedWord[], nextMode: ReviewMode, count: number) => {
+  const start = (
+    pool: SavedWord[],
+    targets: SavedWord[],
+    nextMode: ReviewMode,
+    count: number,
+    nextPresentation: ReviewPresentation = presentation,
+  ) => {
     const next = buildQuestions(pool, nextMode, count, Date.now(), Math.random, targets)
     if (!next.length) return
     sessionId.current = crypto.randomUUID()
     answeredQuestionId.current = ''
+    batchGraded.current = false
     allowLeave.current = false
     setQuestions(next)
     setMode(nextMode)
+    setPresentation(nextMode === 'recall' ? 'single' : nextPresentation)
+    setBatchInputs({})
     setAnswers([])
     setInput('')
     setFeedback(null)
@@ -77,9 +95,27 @@ export function useReviewSession() {
     setFeedback({ correct: answersMatch(value, current.answer), input: value })
     setRevealed(true)
   }
+  const checkBatch = () => {
+    if (presentation !== 'batch' || phase !== 'active' || batchGraded.current) return
+    const results = gradeBatch(questions, batchInputs)
+    if (!results) return
+    batchGraded.current = true
+    setAnswers(results)
+    setPhase('graded')
+    void save(results)
+  }
   const incorrectIds = answers.filter((answer) => !answer.isCorrect).map((answer) => answer.wordId)
   return {
     mode,
+    presentation,
+    batchInputs,
+    setBatchInput: (wordId: string, value: string) => {
+      if (phase === 'active' && !batchGraded.current)
+        setBatchInputs((previous) => ({ ...previous, [wordId]: value }))
+    },
+    checkBatch,
+    showSummary: () => setPhase('finished'),
+    showBatchResults: () => setPhase('graded'),
     phase,
     questions,
     current,
