@@ -1,5 +1,8 @@
 export function errorMessage(error: unknown): string {
-  const code = (error as { code?: string })?.code ?? ''
+  const rawCode = (error as { code?: unknown })?.code
+  const code = typeof rawCode === 'string' ? rawCode : ''
+  if (error instanceof DOMException && error.name === 'QuotaExceededError')
+    return '브라우저 저장 공간이 부족해요. 공간을 확보한 뒤 다시 저장해 주세요.'
   if (code.includes('popup-closed') || code.includes('cancelled-popup'))
     return '로그인이 취소되었어요. 다시 시도해 주세요.'
   if (code.includes('popup-blocked')) return '브라우저의 팝업을 허용한 후 다시 로그인해 주세요.'

@@ -4,6 +4,7 @@ import {
   isDue,
   needsPractice,
   PARTS_OF_SPEECH,
+  wordMeanings,
   type SavedWord,
 } from '@/shared/models/word'
 
@@ -24,10 +25,12 @@ export function useLibrary(words: SavedWord[], now: number) {
           !term ||
           [
             word.word,
-            word.meaning,
+            ...wordMeanings(word).flatMap((entry) => [
+              entry.meaning,
+              entry.partOfSpeech ? PARTS_OF_SPEECH[entry.partOfSpeech] : '',
+            ]),
             word.example,
             word.note,
-            word.partOfSpeech ? PARTS_OF_SPEECH[word.partOfSpeech] : '',
             ...word.synonyms,
             ...word.antonyms,
             ...word.derivatives,

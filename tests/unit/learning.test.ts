@@ -1,11 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { emptyDraft, needsPractice, normalizeDraft, type SavedWord } from '@/shared/models/word'
+import {
+  emptyDraft,
+  needsPractice,
+  normalizeDraft,
+  wordMeanings,
+  splitMeaningEntries,
+  MAX_MEANINGS,
+  type SavedWord,
+} from '@/shared/models/word'
 import { normalizeSettings, type ReviewSession } from '@/shared/models/review'
 import { DAY_MS, scheduleReview, studyStats } from '@/shared/models/study'
 import { validateWord } from '@/features/editor/models/wordValidation'
 import { answersMatch, buildQuestions } from '@/features/review/models/reviewEngine'
 import { decodeWord } from '@/shared/repositories/firestoreVocaRepository'
 import { Timestamp } from 'firebase/firestore'
+import { errorMessage } from '@/shared/lib/errors'
 
 const now = new Date(2026, 9, 31, 12).getTime()
 function word(overrides: Partial<SavedWord> = {}): SavedWord {
@@ -178,5 +187,99 @@ describe('four review modes', () => {
     expect(answersMatch('focused', 'focus')).toBe(false)
     expect(buildQuestions(pool, 'writing', 0, now)).toHaveLength(0)
     expect(buildQuestions(pool, 'writing', 30, now)).toHaveLength(pool.length)
+  })
+})
+
+describe('multiple meanings', () => {
+  it('handles numeric browser error codes without losing the save error', () => {
+    expect(errorMessage(new DOMException('Quota exceeded', 'QuotaExceededError'))).toContain(
+      '저장 공간',
+    )
+    expect(errorMessage({ code: 22 })).toContain('완료하지 못했어요')
+    expect(errorMessage({ code: 'permission-denied' })).toContain('접근 권한')
+  })
+  const meanings = [
+    { meaning: '기록', partOfSpeech: 'noun' as const },
+    { meaning: '기록하다', partOfSpeech: 'verb' as const },
+  ]
+  it('preserves old comma-separated meanings until explicitly split', () => {
+    const legacy = decodeWord('old', {
+      word: 'record',
+      meaning: '기록, 음반',
+      partOfSpeech: 'noun',
+    })
+    expect(wordMeanings(legacy)).toEqual([{ meaning: '기록, 음반', partOfSpeech: 'noun' }])
+    expect(splitMeaningEntries(wordMeanings(legacy), 0)).toEqual([
+      { meaning: '기록', partOfSpeech: 'noun' },
+      { meaning: '음반', partOfSpeech: 'noun' },
+    ])
+    const full = Array.from({ length: MAX_MEANINGS }, () => ({
+      meaning: '기록, 음반',
+      partOfSpeech: null,
+    }))
+    expect(splitMeaningEntries(full, 0)).toBe(full)
+  })
+  it('uses structured meanings as the source of truth and mirrors the first entry on save', () => {
+    const value = { ...emptyDraft(), word: 'record', meaning: 'old', partOfSpeech: null, meanings }
+    expect(normalizeDraft(value)).toMatchObject({ meaning: '기록', partOfSpeech: 'noun', meanings })
+    expect(decodeWord('record', value)).toMatchObject({
+      meaning: '기록',
+      partOfSpeech: 'noun',
+      meanings,
+    })
+    expect(
+      decodeWord('phrase', {
+        word: 'in time',
+        meanings: [{ meaning: '제시간에', partOfSpeech: 'phrase' }],
+      }).partOfSpeech,
+    ).toBe('phrase')
+  })
+  it('validates each entry, including blank later meanings and the maximum count', () => {
+    const value = { ...emptyDraft(), word: 'record', meanings }
+    expect(validateWord(value, [])).toEqual({})
+    expect(
+      validateWord({ ...value, meanings: [...meanings, { meaning: ' ', partOfSpeech: null }] }, []),
+    ).toHaveProperty('meaning-2')
+    expect(
+      validateWord({ ...value, meanings: [{ meaning: 'x'.repeat(301), partOfSpeech: null }] }, []),
+    ).toHaveProperty('meaning-0')
+    expect(
+      validateWord(
+        { ...value, meanings: Array.from({ length: MAX_MEANINGS + 1 }, () => meanings[0]) },
+        [],
+      ),
+    ).toHaveProperty('meanings')
+  })
+  it('selects a meaning and its matching part of speech for writing', () => {
+    const target = word({ word: 'record', meanings })
+    expect(buildQuestions([target], 'writing', 1, now, () => 0.9)[0]).toMatchObject({
+      prompt: '기록하다',
+      partOfSpeech: 'verb',
+      answer: 'record',
+    })
+    expect(buildQuestions([target], 'writing', 1, now, () => 0)[0]).toMatchObject({
+      prompt: '기록',
+      partOfSpeech: 'noun',
+    })
+    expect(buildQuestions([target], 'recall', 1, now)[0].answer).toBe('기록; 기록하다')
+  })
+  it('never offers another meaning of the same word as an incorrect choice', () => {
+    const target = word({ word: 'record', meanings })
+    const pool = [
+      target,
+      word({
+        id: 'other',
+        word: 'document',
+        meanings: [...meanings, { meaning: '문서', partOfSpeech: 'noun' }],
+      }),
+    ]
+    const question = buildQuestions(pool, 'multiple_choice', 1, now, () => 0, [target])[0]
+    expect(question.answer).toBe('기록')
+    expect(question.options).toEqual(expect.arrayContaining(['기록', '문서']))
+    expect(question.options).not.toContain('기록하다')
+    expect(buildQuestions([target], 'multiple_choice', 1)).toEqual([])
+    expect(buildQuestions([target, word({ id: 'same', meanings })], 'multiple_choice', 2)).toEqual(
+      [],
+    )
   })
 })

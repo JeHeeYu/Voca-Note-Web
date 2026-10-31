@@ -1,7 +1,8 @@
+import WordMeanings from '@/shared/components/WordMeanings'
 import { Link } from 'react-router-dom'
 import { Search, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useVocaStore } from '@/shared/stores/vocaStore'
-import { isDue, needsPractice, PARTS_OF_SPEECH } from '@/shared/models/word'
+import { isDue, needsPractice } from '@/shared/models/word'
 import { useNow } from '@/shared/hooks/useNow'
 import PageHeader from '@/shared/components/PageHeader'
 import EmptyState from '@/shared/components/EmptyState'
@@ -54,7 +55,7 @@ export default function LibraryPage() {
               value={library.search}
               onChange={(event) => library.setSearch(event.target.value)}
               className="field pl-10"
-              placeholder="단어, 뜻, 예문, 연관어를 검색하세요"
+              placeholder="단어, 뜻, 품사, 연관어를 검색하세요"
             />
           </div>
           <select
@@ -74,8 +75,8 @@ export default function LibraryPage() {
         {library.visible.length ? (
           <>
             <div className="hidden grid-cols-[1.25fr_1.4fr_1fr_88px] gap-3 border-y border-line bg-canvas/70 px-6 py-3 text-[11px] font-medium text-muted sm:grid">
-              <span>단어 / 품사</span>
-              <span>뜻 / 예문</span>
+              <span>단어</span>
+              <span>뜻 / 품사 / 예문</span>
               <span>학습 상태</span>
               <span className="text-right">상세</span>
             </div>
@@ -92,13 +93,13 @@ export default function LibraryPage() {
                     >
                       {word.word}
                     </Link>
-                    <div className="mt-1 text-[11px] text-muted">
-                      {word.partOfSpeech ? PARTS_OF_SPEECH[word.partOfSpeech] : '품사 미지정'}
+
+                    <div className="mt-2 sm:hidden">
+                      <WordMeanings word={word} compact />
                     </div>
-                    <p className="mt-2 text-sm text-muted sm:hidden">{word.meaning}</p>
                   </div>
                   <div className="hidden min-w-0 sm:block">
-                    <p className="text-sm">{word.meaning}</p>
+                    <WordMeanings word={word} />
                     {word.example ? (
                       <p className="mt-1 truncate text-xs text-muted">{word.example}</p>
                     ) : null}

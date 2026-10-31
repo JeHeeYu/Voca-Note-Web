@@ -1,16 +1,14 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Save, Trash2, Plus, Info } from 'lucide-react'
+import { Save, Trash2, Info } from 'lucide-react'
 import { useVocaStore, notify } from '@/shared/stores/vocaStore'
 import { useAuthStore } from '@/features/auth/stores/authStore'
 import {
   emptyDraft,
   normalizeDraft,
-  PARTS_OF_SPEECH,
   RELATED_FIELDS,
   type WordDraft,
   type SavedWord,
-  type PartOfSpeech,
   type RelatedField,
 } from '@/shared/models/word'
 import { errorMessage } from '@/shared/lib/errors'
@@ -19,16 +17,16 @@ import Modal from '@/shared/components/Modal'
 import PageHeader from '@/shared/components/PageHeader'
 import LeaveGuard from '@/shared/components/LeaveGuard'
 import SpeakButton from '@/shared/components/SpeakButton'
-import { validateWord } from '../models/wordValidation'
+import { validateWord, type WordValidationErrors } from '../models/wordValidation'
+import WordMeaningsEditor from './WordMeaningsEditor'
 
 export default function WordEditorForm({ word }: { word?: SavedWord }) {
-  const [initial, setInitial] = useState(() => (word ? normalizeDraft(word) : emptyDraft()))
+  const [initial, setInitial] = useState(() => normalizeDraft(word ?? emptyDraft()))
   const [draft, setDraft] = useState<WordDraft>(initial)
-  const [errors, setErrors] = useState<Partial<Record<keyof WordDraft, string>>>({})
+  const [errors, setErrors] = useState<WordValidationErrors>({})
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [keepAdding, setKeepAdding] = useState(false)
   const { repository, words } = useVocaStore()
   const demo = useAuthStore((state) => state.demo)
   const online = useOnline()
@@ -52,11 +50,12 @@ export default function WordEditorForm({ word }: { word?: SavedWord }) {
     try {
       await repository.saveWord(draft, word?.id)
       notify(word ? '단어를 수정했어요.' : '새 단어를 담았어요.')
-      if (keepAdding && !word) {
-        const next = emptyDraft()
+      if (!word) {
+        const next = normalizeDraft(emptyDraft())
         setInitial(next)
         setDraft(next)
-        wordInput.current?.focus()
+        setErrors({})
+        requestAnimationFrame(() => wordInput.current?.focus())
       } else {
         allowLeave.current = true
         navigate('/words')
@@ -98,7 +97,7 @@ export default function WordEditorForm({ word }: { word?: SavedWord }) {
         action={word ? <SpeakButton text={word.word} /> : undefined}
       />
       <form onSubmit={save} className="grid items-start gap-6 xl:grid-cols-[1fr_300px]" noValidate>
-        <div className="space-y-6">
+        <fieldset disabled={busy} className="min-w-0 space-y-6">
           <section className="card p-5 sm:p-7">
             <h2 className="mb-6 font-semibold">
               기본 정보{' '}
@@ -106,7 +105,7 @@ export default function WordEditorForm({ word }: { word?: SavedWord }) {
                 단어와 뜻은 꼭 입력해 주세요
               </span>
             </h2>
-            <div className="grid gap-5 sm:grid-cols-[1fr_180px]">
+            <div className="grid gap-5">
               <div>
                 <label className="label" htmlFor="word">
                   영어 단어 <span className="text-brand">*</span>
@@ -128,44 +127,15 @@ export default function WordEditorForm({ word }: { word?: SavedWord }) {
                 />
                 {help('word')}
               </div>
-              <div>
-                <label className="label" htmlFor="partOfSpeech">
-                  품사
-                </label>
-                <select
-                  id="partOfSpeech"
-                  className="field"
-                  value={draft.partOfSpeech ?? ''}
-                  onChange={(e) =>
-                    change('partOfSpeech', (e.target.value || null) as PartOfSpeech | null)
-                  }
-                >
-                  <option value="">선택 안 함</option>
-                  {Object.entries(PARTS_OF_SPEECH).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
-            <div className="mt-5">
-              <label htmlFor="meaning" className="label">
-                뜻 <span className="text-brand">*</span>
-              </label>
-              <textarea
-                id="meaning"
-                className="field min-h-24 resize-y"
-                value={draft.meaning}
-                onChange={(e) => change('meaning', e.target.value)}
-                placeholder="예: 뜻밖의 행운, 우연한 발견"
-                maxLength={300}
-                required
-                aria-invalid={Boolean(errors.meaning)}
-                aria-describedby={errors.meaning ? 'meaning-error' : undefined}
-              />
-              {help('meaning')}
-            </div>
+            <WordMeaningsEditor
+              entries={draft.meanings}
+              errors={errors}
+              onChange={(entries) => {
+                change('meanings', entries)
+                setErrors({})
+              }}
+            />
           </section>
           <section className="card space-y-5 p-5 sm:p-7">
             <h2 className="font-semibold">문장 속에서 기억하기</h2>
@@ -223,14 +193,14 @@ export default function WordEditorForm({ word }: { word?: SavedWord }) {
               ))}
             </div>
           </section>
-        </div>
+        </fieldset>
         <aside className="space-y-4 xl:sticky xl:top-6">
           <div className="card p-5">
             <h2 className="text-sm font-semibold">내 단어장에 담기</h2>
             <p className="mt-2 text-xs leading-6 text-muted">
               {demo
                 ? '체험 내용은 이 브라우저에만 저장돼요.'
-                : '저장한 내용은 앱과 웹에서 함께 볼 수 있어요.'}
+                : '저장한 단어는 내 계정에 안전하게 보관돼요.'}
             </p>
             {error ? (
               <p role="alert" className="mt-4 text-sm text-red-600">
@@ -246,16 +216,9 @@ export default function WordEditorForm({ word }: { word?: SavedWord }) {
               {busy ? '저장 중…' : '단어 저장하기'}
             </button>
             {!word ? (
-              <label className="mt-4 flex items-center gap-2 text-xs text-muted">
-                <input
-                  type="checkbox"
-                  checked={keepAdding}
-                  onChange={(e) => setKeepAdding(e.target.checked)}
-                  className="size-4 accent-brand"
-                />
-                <Plus size={13} />
-                저장 후 새 단어 계속 추가
-              </label>
+              <p className="mt-4 text-xs leading-6 text-muted">
+                저장하면 이 화면에서 다음 단어를 바로 추가할 수 있어요.
+              </p>
             ) : (
               <button
                 disabled={busy || (!online && !demo)}

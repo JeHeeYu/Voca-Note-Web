@@ -1,4 +1,11 @@
-import { accuracy, isDue, type SavedWord } from '@/shared/models/word'
+import {
+  accuracy,
+  isDue,
+  wordMeanings,
+  meaningText,
+  type PartOfSpeech,
+  type SavedWord,
+} from '@/shared/models/word'
 import type { ReviewMode } from '@/shared/models/review'
 
 export interface ReviewQuestion {
@@ -7,9 +14,32 @@ export interface ReviewQuestion {
   answer: string
   context: string
   options: string[]
+  partOfSpeech: PartOfSpeech | null
 }
 export const answersMatch = (input: string, answer: string) =>
   input.trim().toLowerCase() === answer.trim().toLowerCase()
+
+function distractorsFor(word: SavedWord, words: SavedWord[]) {
+  const own = new Set(wordMeanings(word).map((entry) => entry.meaning.trim().toLowerCase()))
+  const unique = new Map<string, string>()
+  for (const other of words) {
+    if (other.id === word.id) continue
+    for (const entry of wordMeanings(other)) {
+      const meaning = entry.meaning.trim()
+      const key = meaning.toLowerCase()
+      if (meaning && !own.has(key)) unique.set(key, meaning)
+    }
+  }
+  return [...unique.values()]
+}
+
+export const eligibleReviewWords = (words: SavedWord[], targets: SavedWord[], mode: ReviewMode) =>
+  targets.filter(
+    (word) =>
+      word.word.trim() &&
+      wordMeanings(word).some((entry) => entry.meaning.trim()) &&
+      (mode !== 'multiple_choice' || distractorsFor(word, words).length > 0),
+  )
 
 function shuffle<T>(items: T[], random: () => number) {
   const result = [...items]
@@ -28,10 +58,7 @@ export function buildQuestions(
   random = Math.random,
   targets = words,
 ): ReviewQuestion[] {
-  const eligible = shuffle(
-    targets.filter((w) => w.word.trim() && w.meaning.trim()),
-    random,
-  )
+  const eligible = shuffle(eligibleReviewWords(words, targets, mode), random)
     .sort(
       (a, b) =>
         Number(isDue(b, now)) - Number(isDue(a, now)) ||
@@ -41,21 +68,23 @@ export function buildQuestions(
     .slice(0, Math.min(30, Math.max(0, count)))
   return eligible.map((word) => {
     const meaningMode = mode === 'recall' || mode === 'multiple_choice'
-    const answer = (meaningMode ? word.meaning : word.word).trim()
-    const distractors = [
-      ...new Set(
-        words
-          .filter((w) => w.id !== word.id && !answersMatch(w.meaning, answer))
-          .map((w) => w.meaning.trim())
-          .filter(Boolean),
-      ),
-    ]
+    const meanings = wordMeanings(word).filter((entry) => entry.meaning.trim())
+    const selected = meanings[Math.floor(random() * meanings.length)]
+    const answer = (
+      mode === 'recall'
+        ? meaningText(word)
+        : mode === 'multiple_choice'
+          ? selected.meaning
+          : word.word
+    ).trim()
+    const distractors = mode === 'multiple_choice' ? distractorsFor(word, words) : []
     const escaped = word.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     return {
       word,
       answer,
+      partOfSpeech: mode === 'multiple_choice' || mode === 'writing' ? selected.partOfSpeech : null,
       prompt:
-        mode === 'listening' ? '어떤 단어가 들리나요?' : meaningMode ? word.word : word.meaning,
+        mode === 'listening' ? '어떤 단어가 들리나요?' : meaningMode ? word.word : selected.meaning,
       context:
         mode === 'listening'
           ? ''

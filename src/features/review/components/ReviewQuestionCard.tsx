@@ -1,3 +1,4 @@
+import WordMeanings from '@/shared/components/WordMeanings'
 import { useEffect, useRef, type FormEvent } from 'react'
 import { ArrowRight, Check, RotateCcw, Eye, X } from 'lucide-react'
 import { PARTS_OF_SPEECH, RELATED_FIELDS, type RelatedField } from '@/shared/models/word'
@@ -60,9 +61,9 @@ export default function ReviewQuestionCard({
           >
             {current.prompt}
           </h1>
-          {current.word.partOfSpeech ? (
+          {current.partOfSpeech ? (
             <span className="mt-4 inline-block rounded-md bg-canvas px-2.5 py-1 text-xs text-muted">
-              {PARTS_OF_SPEECH[current.word.partOfSpeech]}
+              {PARTS_OF_SPEECH[current.partOfSpeech]}
             </span>
           ) : null}
           {mode === 'recall' ? (
@@ -80,7 +81,7 @@ export default function ReviewQuestionCard({
           ) : null}
           {mode === 'recall' && revealed ? (
             <div className="mt-8 border-t border-line pt-7" aria-live="polite">
-              <p className="text-xl font-semibold text-brand">{current.answer}</p>
+              <WordMeanings word={current.word} />
               <p className="mt-3 text-xs text-muted">답을 보기 전에 떠올릴 수 있었나요?</p>
             </div>
           ) : null}
@@ -143,6 +144,11 @@ export default function ReviewQuestionCard({
                   정답: <strong>{current.answer}</strong>
                 </p>
               ) : null}
+            </div>
+          ) : null}
+          {feedback ? (
+            <div className="mt-5">
+              <WordMeanings word={current.word} />
             </div>
           ) : null}
           {revealed &&

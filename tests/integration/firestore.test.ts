@@ -6,8 +6,11 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc, Timestamp, type Firestore } from 'firebase/firestore'
-import { createFirestoreRepository } from '@/shared/repositories/firestoreVocaRepository'
+import { doc, getDoc, setDoc, updateDoc, Timestamp, type Firestore } from 'firebase/firestore'
+import {
+  createFirestoreRepository,
+  decodeWord,
+} from '@/shared/repositories/firestoreVocaRepository'
 import { emptyDraft } from '@/shared/models/word'
 import type { VocaSnapshot } from '@/shared/repositories/vocaRepository'
 
@@ -29,7 +32,7 @@ afterAll(async () => {
 const dbFor = (uid: string) =>
   environment.authenticatedContext(uid).firestore() as unknown as Firestore
 
-describe('app and web data contract against the Android rules', () => {
+describe('shared Firebase data contract and rules', () => {
   it('creates, edits, subscribes to, and deletes a word without losing app review state', async () => {
     const db = dbFor('alice'),
       repository = createFirestoreRepository(db, 'alice')
@@ -145,5 +148,95 @@ describe('app and web data contract against the Android rules', () => {
     await assertFails(
       setDoc(doc(db, 'users/alice/reviewSessions/immutable'), { correctCount: 0 }, { merge: true }),
     )
+  })
+  it('round-trips multiple meanings, new expression categories, and review updates', async () => {
+    const db = dbFor('alice'),
+      repository = createFirestoreRepository(db, 'alice')
+    const meanings = [
+      { meaning: '기록', partOfSpeech: 'noun' as const },
+      { meaning: '기록하다', partOfSpeech: 'verb' as const },
+    ]
+    const id = await repository.saveWord({ ...emptyDraft(), word: 'record', meanings })
+    const reference = doc(db, 'users/alice/words', id)
+    expect(decodeWord(id, (await getDoc(reference)).data()!).meanings).toEqual(meanings)
+    await repository.saveSession('multi', 'writing', [{ wordId: id, isCorrect: true }])
+    expect((await getDoc(reference)).data()).toMatchObject({ meanings, correctCount: 1 })
+    for (const partOfSpeech of ['phrase', 'phrasal_verb', 'idiom', 'abbreviation'] as const) {
+      await assertSucceeds(
+        repository.saveWord(
+          { ...emptyDraft(), word: 'in time', meanings: [{ meaning: '제시간에', partOfSpeech }] },
+          id,
+        ),
+      )
+      expect(decodeWord(id, (await getDoc(reference)).data()!).partOfSpeech).toBe(partOfSpeech)
+    }
+    await assertFails(getDoc(doc(dbFor('bob'), 'users/alice/words', id)))
+    await assertFails(updateDoc(doc(dbFor('bob'), 'users/alice/words', id), { meanings }))
+  })
+  it('accepts legacy records and validates all ten entries, shape, limits, and parts of speech', async () => {
+    const db = dbFor('alice'),
+      reference = doc(db, 'users/alice/words/validation')
+    const legacy = {
+      word: 'record',
+      wordLowercase: 'record',
+      meaning: '기록, 음반',
+      partOfSpeech: 'noun',
+    }
+    await assertSucceeds(setDoc(reference, legacy))
+    await createFirestoreRepository(db, 'alice').saveSession('legacy-review', 'recall', [
+      { wordId: 'validation', isCorrect: true },
+    ])
+    const meanings = Array.from({ length: 10 }, (_, index) => ({
+      meaning: `뜻 ${index}`,
+      partOfSpeech: null,
+    }))
+    await assertSucceeds(updateDoc(reference, { meanings }))
+    await assertSucceeds(
+      updateDoc(reference, { meanings: [{ meaning: '가\n'.repeat(150), partOfSpeech: 'phrase' }] }),
+    )
+    const badEntries = [
+      null,
+      'text',
+      {},
+      { meaning: '', partOfSpeech: null },
+      { meaning: 'x'.repeat(301), partOfSpeech: null },
+      { meaning: '뜻', partOfSpeech: 'invalid' },
+      { meaning: '뜻' },
+      { meaning: '뜻', partOfSpeech: null, extra: true },
+    ]
+    for (const entry of badEntries)
+      await assertFails(updateDoc(reference, { meanings: [...meanings.slice(0, 9), entry] }))
+    for (const value of [[], [...meanings, meanings[0]], null, '뜻'])
+      await assertFails(updateDoc(reference, { meanings: value }))
+  })
+  it('saves a full thirty-word session with ten meanings per word', async () => {
+    const db = dbFor('alice'),
+      repository = createFirestoreRepository(db, 'alice')
+    const meanings = Array.from({ length: 10 }, (_, index) => ({
+      meaning: `뜻 ${index}`,
+      partOfSpeech: 'noun' as const,
+    }))
+    const ids: string[] = []
+    for (let index = 0; index < 30; index++) {
+      ids.push(
+        await repository
+          .saveWord({ ...emptyDraft(), word: `word ${index}`, meanings })
+          .catch((cause) => {
+            throw new Error(`Could not create ten-meaning word ${index}`, { cause })
+          }),
+      )
+    }
+    await repository.saveSession(
+      'full-session',
+      'recall',
+      ids.map((wordId) => ({ wordId, isCorrect: true })),
+    )
+    expect(
+      (await getDoc(doc(db, 'users/alice/reviewSessions/full-session'))).data()?.questionCount,
+    ).toBe(30)
+    expect((await getDoc(doc(db, 'users/alice/words', ids[29]))).data()).toMatchObject({
+      meanings,
+      correctCount: 1,
+    })
   })
 })

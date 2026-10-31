@@ -6,11 +6,41 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    function validPartOfSpeech(value) {
+      return value == null || (value is string
+        && value.matches('^(noun|pronoun|verb|adjective|adverb|preposition|conjunction|interjection|phrase|phrasal_verb|idiom|abbreviation)$'));
+    }
+
+    function validMeaning(entry) {
+      // Accessing both required fields also rejects non-map or incomplete entries.
+      let meaning = entry.meaning;
+      return entry.keys().hasOnly(['meaning', 'partOfSpeech'])
+        && meaning is string
+        && meaning.matches('(?s)^.{1,300}$')
+        && validPartOfSpeech(entry.partOfSpeech);
+    }
+
+    function validMeanings(entries) {
+      let count = entries.size();
+      return entries is list && count >= 1 && count <= 10
+        && validMeaning(entries[0])
+        && (count < 2 || validMeaning(entries[1]))
+        && (count < 3 || validMeaning(entries[2]))
+        && (count < 4 || validMeaning(entries[3]))
+        && (count < 5 || validMeaning(entries[4]))
+        && (count < 6 || validMeaning(entries[5]))
+        && (count < 7 || validMeaning(entries[6]))
+        && (count < 8 || validMeaning(entries[7]))
+        && (count < 9 || validMeaning(entries[8]))
+        && (count < 10 || validMeaning(entries[9]));
+    }
+
     function validWord(data) {
       return data.keys().hasOnly([
         'word',
         'wordLowercase',
         'meaning',
+        'meanings',
         'partOfSpeech',
         'example',
         'note',
@@ -28,7 +58,6 @@ service cloud.firestore {
         'lastReviewedAt',
         'nextReviewAt'
       ])
-        && data.keys().hasAll(['word', 'wordLowercase', 'meaning'])
         && data.word is string
         && data.word.size() > 0
         && data.word.size() <= 100
@@ -37,16 +66,8 @@ service cloud.firestore {
         && data.meaning is string
         && data.meaning.size() > 0
         && data.meaning.size() <= 300
-        && (!('partOfSpeech' in data) || data.partOfSpeech == null || data.partOfSpeech in [
-          'noun',
-          'pronoun',
-          'verb',
-          'adjective',
-          'adverb',
-          'preposition',
-          'conjunction',
-          'interjection'
-        ])
+        && (!('partOfSpeech' in data) || validPartOfSpeech(data.partOfSpeech))
+        && (!('meanings' in data) || validMeanings(data.meanings))
         && (!('example' in data) || (data.example is string && data.example.size() <= 500))
         && (!('note' in data) || (data.note is string && data.note.size() <= 1000))
         && (!('synonyms' in data) || (data.synonyms is list && data.synonyms.size() <= 20))

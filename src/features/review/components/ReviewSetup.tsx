@@ -10,6 +10,7 @@ import { useNow } from '@/shared/hooks/useNow'
 import { speechSupported } from '@/shared/lib/speech'
 import PageHeader from '@/shared/components/PageHeader'
 import EmptyState from '@/shared/components/EmptyState'
+import { eligibleReviewWords } from '../models/reviewEngine'
 
 const icons = {
   recall: Layers,
@@ -33,9 +34,9 @@ export default function ReviewSetup({
   const targets = words.filter((word) =>
     scope === 'due' ? isDue(word, now) : scope === 'mistakes' ? needsPractice(word) : true,
   )
-  const uniqueMeanings = new Set(words.map((word) => word.meaning.trim().toLowerCase())).size
+  const eligible = eligibleReviewWords(words, targets, mode)
   const unsupported = mode === 'listening' && !speechSupported()
-  const unavailable = mode === 'multiple_choice' && uniqueMeanings < 2
+  const unavailable = mode === 'multiple_choice' && targets.length > 0 && eligible.length === 0
   return (
     <>
       <PageHeader
@@ -142,7 +143,7 @@ export default function ReviewSetup({
             <div className="mt-6 flex justify-between border-t border-line pt-5 text-sm">
               <span className="text-muted">이번 세션</span>
               <span className="font-semibold">
-                {Math.min(targets.length, settings.sessionSize)}개 단어
+                {Math.min(eligible.length, settings.sessionSize)}개 단어
               </span>
             </div>
             <p className="mt-3 text-xs leading-6 text-muted">
@@ -152,11 +153,11 @@ export default function ReviewSetup({
               <p role="status" className="mt-3 text-xs leading-6 text-amber-700">
                 {unsupported
                   ? '이 브라우저는 음성 재생을 지원하지 않아요. 다른 연습 방식을 선택해 주세요.'
-                  : '뜻 고르기는 서로 다른 뜻을 가진 단어가 2개 이상 필요해요.'}
+                  : '뜻 고르기는 오답 선택지로 쓸 다른 뜻의 단어가 필요해요.'}
               </p>
             ) : null}
             <button
-              disabled={!targets.length || unsupported || unavailable || (!online && !demo)}
+              disabled={!eligible.length || unsupported || unavailable || (!online && !demo)}
               onClick={() => onStart(words, targets, mode, settings.sessionSize)}
               className="btn btn-primary mt-6 w-full"
             >

@@ -17,7 +17,12 @@ import {
   type Firestore,
 } from 'firebase/firestore'
 import { DEFAULT_SETTINGS, normalizeSettings, type ReviewSession } from '@/shared/models/review'
-import { normalizeDraft, PARTS_OF_SPEECH, type SavedWord } from '@/shared/models/word'
+import {
+  normalizeDraft,
+  isPartOfSpeech,
+  type WordMeaning,
+  type SavedWord,
+} from '@/shared/models/word'
 import { scheduleReview } from '@/shared/models/study'
 import type { VocaRepository, VocaSnapshot } from './vocaRepository'
 
@@ -30,11 +35,32 @@ const terms = (value: unknown) =>
   Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []
 
 export function decodeWord(id: string, data: DocumentData): SavedWord {
+  const storedMeanings: WordMeaning[] = Array.isArray(data.meanings)
+    ? data.meanings.flatMap((entry: unknown) => {
+        if (!entry || typeof entry !== 'object' || !('meaning' in entry) || !text(entry.meaning))
+          return []
+        return [
+          {
+            meaning: text(entry.meaning),
+            partOfSpeech:
+              'partOfSpeech' in entry && isPartOfSpeech(entry.partOfSpeech)
+                ? entry.partOfSpeech
+                : null,
+          },
+        ]
+      })
+    : []
+  const legacyMeaning = text(data.meaning)
+  const legacyPos = isPartOfSpeech(data.partOfSpeech) ? data.partOfSpeech : null
+  const meanings: WordMeaning[] = storedMeanings.length
+    ? storedMeanings
+    : [{ meaning: legacyMeaning, partOfSpeech: legacyPos }]
   return {
     id,
     word: text(data.word),
-    meaning: text(data.meaning),
-    partOfSpeech: data.partOfSpeech in PARTS_OF_SPEECH ? data.partOfSpeech : null,
+    meaning: meanings[0].meaning,
+    partOfSpeech: meanings[0].partOfSpeech,
+    meanings,
     example: text(data.example),
     note: text(data.note),
     synonyms: terms(data.synonyms),

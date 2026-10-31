@@ -1,3 +1,4 @@
+import WordMeanings from '@/shared/components/WordMeanings'
 import { Link } from 'react-router-dom'
 import { Check, RotateCcw, ArrowRight, LoaderCircle, Leaf } from 'lucide-react'
 import { useVocaStore } from '@/shared/stores/vocaStore'
@@ -74,7 +75,7 @@ export default function ReviewResult({
               {incorrect.map(({ word }) => (
                 <div key={word.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
                   <span className="font-medium">{word.word}</span>
-                  <span className="text-muted">{word.meaning}</span>
+                  <WordMeanings word={word} compact />
                 </div>
               ))}
             </div>

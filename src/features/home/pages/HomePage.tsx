@@ -1,3 +1,4 @@
+import WordMeanings from '@/shared/components/WordMeanings'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -11,7 +12,7 @@ import {
 } from 'lucide-react'
 import { useVocaStore } from '@/shared/stores/vocaStore'
 import { useAuthStore } from '@/features/auth/stores/authStore'
-import { isDue, needsPractice, PARTS_OF_SPEECH } from '@/shared/models/word'
+import { isDue, needsPractice } from '@/shared/models/word'
 import { studyStats } from '@/shared/models/study'
 import { useNow } from '@/shared/hooks/useNow'
 import PageHeader from '@/shared/components/PageHeader'
@@ -221,12 +222,9 @@ export default function HomePage() {
                 >
                   <Link to={`/words/${word.id}`} className="group min-w-0 flex-1">
                     <span className="font-semibold group-hover:text-brand">{word.word}</span>
-                    {word.partOfSpeech ? (
-                      <span className="ml-2 text-[10px] text-muted">
-                        {PARTS_OF_SPEECH[word.partOfSpeech]}
-                      </span>
-                    ) : null}
-                    <p className="mt-1 truncate text-xs text-muted">{word.meaning}</p>
+                    <div className="mt-1 text-muted">
+                      <WordMeanings word={word} compact />
+                    </div>
                   </Link>
                   <SpeakButton text={word.word} />
                 </div>
