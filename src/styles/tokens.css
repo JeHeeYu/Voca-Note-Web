@@ -1,0 +1,13 @@
+@theme {
+  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  --color-ink: #24332f;
+  --color-muted: #73817b;
+  --color-canvas: #f6f8f6;
+  --color-line: #e5ebe6;
+  --color-brand: #0f766e;
+  --color-brand-dark: #115d56;
+  --color-brand-soft: #e9f3ed;
+  --color-lime: #d9edb9;
+  --breakpoint-pad: 43.125rem;
+  --breakpoint-web: 80rem;
+}
