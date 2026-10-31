@@ -1,0 +1,139 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owns(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function validWord(data) {
+      return data.keys().hasOnly([
+        'word',
+        'wordLowercase',
+        'meaning',
+        'partOfSpeech',
+        'example',
+        'note',
+        'synonyms',
+        'antonyms',
+        'derivatives',
+        'confusableWords',
+        'collocations',
+        'correctCount',
+        'incorrectCount',
+        'reviewStreak',
+        'reviewIntervalDays',
+        'createdAt',
+        'updatedAt',
+        'lastReviewedAt',
+        'nextReviewAt'
+      ])
+        && data.keys().hasAll(['word', 'wordLowercase', 'meaning'])
+        && data.word is string
+        && data.word.size() > 0
+        && data.word.size() <= 100
+        && data.wordLowercase is string
+        && data.wordLowercase.size() <= 100
+        && data.meaning is string
+        && data.meaning.size() > 0
+        && data.meaning.size() <= 300
+        && (!('partOfSpeech' in data) || data.partOfSpeech == null || data.partOfSpeech in [
+          'noun',
+          'pronoun',
+          'verb',
+          'adjective',
+          'adverb',
+          'preposition',
+          'conjunction',
+          'interjection'
+        ])
+        && (!('example' in data) || (data.example is string && data.example.size() <= 500))
+        && (!('note' in data) || (data.note is string && data.note.size() <= 1000))
+        && (!('synonyms' in data) || (data.synonyms is list && data.synonyms.size() <= 20))
+        && (!('antonyms' in data) || (data.antonyms is list && data.antonyms.size() <= 20))
+        && (!('derivatives' in data) || (data.derivatives is list && data.derivatives.size() <= 20))
+        && (!('confusableWords' in data) || (data.confusableWords is list && data.confusableWords.size() <= 20))
+        && (!('collocations' in data) || (data.collocations is list && data.collocations.size() <= 20))
+        && (!('correctCount' in data) || (data.correctCount is int && data.correctCount >= 0))
+        && (!('incorrectCount' in data) || (data.incorrectCount is int && data.incorrectCount >= 0))
+        && (!('reviewStreak' in data) || (data.reviewStreak is int && data.reviewStreak >= 0 && data.reviewStreak <= 10000))
+        && (!('reviewIntervalDays' in data) || (data.reviewIntervalDays is int && data.reviewIntervalDays >= 0 && data.reviewIntervalDays <= 180))
+        && (!('createdAt' in data) || data.createdAt is timestamp)
+        && (!('updatedAt' in data) || data.updatedAt is timestamp)
+        && (!('lastReviewedAt' in data) || data.lastReviewedAt is timestamp)
+        && (!('nextReviewAt' in data) || data.nextReviewAt is timestamp);
+    }
+
+    function keepsExistingWordFields() {
+      return (!('createdAt' in resource.data) || 'createdAt' in request.resource.data)
+        && (!('correctCount' in resource.data) || 'correctCount' in request.resource.data)
+        && (!('incorrectCount' in resource.data) || 'incorrectCount' in request.resource.data);
+    }
+
+    function validReviewSettings(data) {
+      return data.keys().hasOnly([
+        'sessionSize',
+        'dailyGoal',
+        'updatedAt'
+      ])
+        && data.keys().hasAll(['sessionSize', 'dailyGoal'])
+        && data.sessionSize is int
+        && data.sessionSize >= 5
+        && data.sessionSize <= 30
+        && data.dailyGoal is int
+        && data.dailyGoal >= 5
+        && data.dailyGoal <= 100
+        && (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function validReviewSession(data) {
+      return data.keys().hasOnly([
+        'mode',
+        'questionCount',
+        'correctCount',
+        'wordIds',
+        'incorrectWordIds',
+        'completedAt'
+      ])
+        && data.keys().hasAll([
+          'mode',
+          'questionCount',
+          'correctCount',
+          'wordIds',
+          'completedAt'
+        ])
+        && data.mode in ['recall', 'multiple_choice', 'writing', 'listening']
+        && data.questionCount is int
+        && data.questionCount >= 1
+        && data.questionCount <= 30
+        && data.correctCount is int
+        && data.correctCount >= 0
+        && data.correctCount <= data.questionCount
+        && data.wordIds is list
+        && data.wordIds.size() == data.questionCount
+        && (!('incorrectWordIds' in data) || (
+          data.incorrectWordIds is list
+          && data.incorrectWordIds.size() <= data.questionCount
+        ))
+        && data.completedAt is timestamp;
+    }
+
+    match /users/{userId}/words/{wordId} {
+      allow read, delete: if owns(userId);
+      allow create: if owns(userId) && validWord(request.resource.data);
+      allow update: if owns(userId)
+        && validWord(request.resource.data)
+        && keepsExistingWordFields();
+    }
+
+    match /users/{userId}/settings/review {
+      allow read, delete: if owns(userId);
+      allow create, update: if owns(userId) && validReviewSettings(request.resource.data);
+    }
+
+    match /users/{userId}/reviewSessions/{sessionId} {
+      allow read, delete: if owns(userId);
+      allow create: if owns(userId) && validReviewSession(request.resource.data);
+    }
+  }
+}
