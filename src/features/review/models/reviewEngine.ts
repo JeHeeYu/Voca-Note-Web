@@ -9,6 +9,7 @@ import {
 import type { ReviewAnswer, ReviewMode } from '@/shared/models/review'
 
 export type ReviewPresentation = 'single' | 'batch'
+export type ReviewScope = 'all' | 'due' | 'mistakes'
 
 export interface ReviewQuestion {
   word: SavedWord
@@ -70,16 +71,20 @@ export function buildQuestions(
   now = Date.now(),
   random = Math.random,
   targets = words,
+  scope: ReviewScope = 'all',
 ): ReviewQuestion[] {
   const eligible = shuffle(eligibleReviewWords(words, targets, mode), random)
-    .sort(
+  // In the all-words scope, every eligible word keeps the same chance of selection.
+  // Review priority would otherwise push unstudied words ahead of learned words.
+  if (scope !== 'all') {
+    eligible.sort(
       (a, b) =>
         Number(isDue(b, now)) - Number(isDue(a, now)) ||
         accuracy(a) - accuracy(b) ||
         b.incorrectCount - a.incorrectCount,
     )
-    .slice(0, Math.min(30, Math.max(0, count)))
-  return eligible.map((word) => {
+  }
+  return eligible.slice(0, Math.min(30, Math.max(0, count))).map((word) => {
     const meaningMode = mode === 'recall' || mode === 'multiple_choice'
     const meanings = wordMeanings(word).filter((entry) => entry.meaning.trim())
     const selected = meanings[Math.floor(random() * meanings.length)]

@@ -157,6 +157,40 @@ describe('four review modes', () => {
     word({ id: 'four', word: 'read', meaning: '읽다' }),
     word({ id: 'same', word: 'concentrate', meaning: '집중하다' }),
   ]
+  it.each(['recall', 'multiple_choice', 'writing', 'listening'] as const)(
+    'samples all words independently of age, accuracy, and review dates in %s',
+    (mode) => {
+      const mixed = Array.from({ length: 40 }, (_, index) =>
+        word({
+          id: String(index),
+          word: `word ${index}`,
+          meaning: `뜻 ${index}`,
+          ...(index < 20
+            ? {
+                createdAt: now - 90 * DAY_MS,
+                correctCount: 10,
+                lastReviewedAt: now - DAY_MS,
+                nextReviewAt: now + 30 * DAY_MS,
+              }
+            : {}),
+        }),
+      )
+      const withoutHistory = mixed.map((entry) => ({
+        ...entry,
+        createdAt: now,
+        correctCount: 0,
+        lastReviewedAt: null,
+        nextReviewAt: null,
+      }))
+      const ids = (words: SavedWord[]) =>
+        buildQuestions(words, mode, 10, now, () => 0.5).map((question) => question.word.id)
+      const selected = ids(mixed)
+      expect(selected).toEqual(ids(withoutHistory))
+      expect(selected.some((id) => Number(id) < 20)).toBe(true)
+      expect(selected.some((id) => Number(id) >= 20)).toBe(true)
+      expect(new Set(selected).size).toBe(10)
+    },
+  )
   it('grades a complete worksheet in question order with trimmed, case-insensitive answers', () => {
     const questions = buildQuestions(pool, 'writing', 3, now, () => 0)
     const inputs = Object.fromEntries(
@@ -178,17 +212,20 @@ describe('four review modes', () => {
       }),
     ).toBeNull()
   })
-  it('prioritizes due words and selects a unique set of distractors', () => {
-    const targets = [
-      word({ id: 'later', nextReviewAt: now + DAY_MS }),
-      word({ id: 'due', nextReviewAt: now, incorrectCount: 3 }),
-    ]
-    const questions = buildQuestions(pool, 'multiple_choice', 5, now, () => 0.5, targets)
-    expect(questions[0].word.id).toBe('due')
-    expect(questions[0].options).toContain(questions[0].answer)
-    expect(new Set(questions[0].options).size).toBe(questions[0].options.length)
-    expect(questions[0].options).toHaveLength(4)
-  })
+  it.each(['due', 'mistakes'] as const)(
+    'preserves review priority and unique distractors in the %s scope',
+    (scope) => {
+      const targets = [
+        word({ id: 'later', nextReviewAt: now + DAY_MS }),
+        word({ id: 'due', nextReviewAt: now, incorrectCount: 3 }),
+      ]
+      const questions = buildQuestions(pool, 'multiple_choice', 5, now, () => 0.5, targets, scope)
+      expect(questions[0].word.id).toBe('due')
+      expect(questions[0].options).toContain(questions[0].answer)
+      expect(new Set(questions[0].options).size).toBe(questions[0].options.length)
+      expect(questions[0].options).toHaveLength(4)
+    },
+  )
   it('hides a word containing regex metacharacters in writing/recall and never leaks listening context', () => {
     const words = [word({ word: 'C++', example: 'I use C++ and c++.', note: 'C++' })]
     expect(buildQuestions(words, 'writing', 5, now)[0]).toMatchObject({

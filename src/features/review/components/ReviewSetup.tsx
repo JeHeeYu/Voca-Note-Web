@@ -10,7 +10,11 @@ import { useNow } from '@/shared/hooks/useNow'
 import { speechSupported } from '@/shared/lib/speech'
 import PageHeader from '@/shared/components/PageHeader'
 import EmptyState from '@/shared/components/EmptyState'
-import { eligibleReviewWords, type ReviewPresentation } from '../models/reviewEngine'
+import {
+  eligibleReviewWords,
+  type ReviewPresentation,
+  type ReviewScope,
+} from '../models/reviewEngine'
 
 const icons = {
   recall: Layers,
@@ -22,13 +26,14 @@ export default function ReviewSetup({
   scope: initialScope,
   onStart,
 }: {
-  scope: string
+  scope: ReviewScope
   onStart: (
     words: SavedWord[],
     targets: SavedWord[],
     mode: ReviewMode,
     count: number,
     presentation: ReviewPresentation,
+    scope: ReviewScope,
   ) => void
 }) {
   const [mode, setMode] = useState<ReviewMode>('recall')
@@ -143,26 +148,28 @@ export default function ReviewSetup({
           <section className="card p-6">
             <h2 className="font-semibold">이번에는 무엇을 연습할까요?</h2>
             <div className="mt-5 space-y-2">
-              {[
-                {
-                  key: 'all',
-                  title: '전체 단어',
-                  sub: '복습할 단어를 우선으로 골라요',
-                  count: words.length,
-                },
-                {
-                  key: 'due',
-                  title: '오늘 복습',
-                  sub: '다시 만날 시간이 된 단어만',
-                  count: words.filter((w) => isDue(w, now)).length,
-                },
-                {
-                  key: 'mistakes',
-                  title: '오답 노트',
-                  sub: '헷갈렸던 단어를 한 번 더',
-                  count: words.filter(needsPractice).length,
-                },
-              ].map((item) => (
+              {(
+                [
+                  {
+                    key: 'all',
+                    title: '전체 단어',
+                    sub: '모든 단어를 같은 확률로 무작위 출제해요',
+                    count: words.length,
+                  },
+                  {
+                    key: 'due',
+                    title: '오늘 복습',
+                    sub: '다시 만날 시간이 된 단어만',
+                    count: words.filter((w) => isDue(w, now)).length,
+                  },
+                  {
+                    key: 'mistakes',
+                    title: '오답 노트',
+                    sub: '헷갈렸던 단어를 한 번 더',
+                    count: words.filter(needsPractice).length,
+                  },
+                ] as const
+              ).map((item) => (
                 <label
                   key={item.key}
                   className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 ${scope === item.key ? 'border-brand/30 bg-brand-soft/50' : 'border-line'}`}
@@ -245,7 +252,7 @@ export default function ReviewSetup({
               disabled={
                 !validCount || !eligible.length || unsupported || unavailable || (!online && !demo)
               }
-              onClick={() => onStart(words, targets, mode, requestedCount, presentation)}
+              onClick={() => onStart(words, targets, mode, requestedCount, presentation, scope)}
               className="btn btn-primary mt-6 w-full"
             >
               연습 시작하기

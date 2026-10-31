@@ -9,6 +9,7 @@ import {
   gradeBatch,
   type ReviewPresentation,
   type ReviewQuestion,
+  type ReviewScope,
 } from '../models/reviewEngine'
 
 export function useReviewSession() {
@@ -36,8 +37,9 @@ export function useReviewSession() {
     nextMode: ReviewMode,
     count: number,
     nextPresentation: ReviewPresentation = presentation,
+    scope: ReviewScope = 'all',
   ) => {
-    const next = buildQuestions(pool, nextMode, count, Date.now(), Math.random, targets)
+    const next = buildQuestions(pool, nextMode, count, Date.now(), Math.random, targets, scope)
     if (!next.length) return
     sessionId.current = crypto.randomUUID()
     answeredQuestionId.current = ''

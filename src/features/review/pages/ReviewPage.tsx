@@ -9,9 +9,8 @@ import { useReviewSession } from '../hooks/useReviewSession'
 export default function ReviewPage() {
   const [params] = useSearchParams()
   const session = useReviewSession()
-  const scope = ['due', 'mistakes'].includes(params.get('scope') ?? '')
-    ? params.get('scope')!
-    : 'all'
+  const requestedScope = params.get('scope')
+  const scope = requestedScope === 'due' || requestedScope === 'mistakes' ? requestedScope : 'all'
   return (
     <>
       {session.phase === 'setup' ? (
