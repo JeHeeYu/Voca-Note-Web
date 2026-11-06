@@ -50,6 +50,11 @@ export default function BatchReview({ session }: { session: ReturnType<typeof us
           </button>
         </section>
       ) : null}
+      {session.mode === 'meaning_writing' ? (
+        <p className="mb-5 text-sm text-muted">
+          띄어쓰기는 무시하고, 등록된 뜻 중 하나만 맞히면 정답이에요.
+        </p>
+      ) : null}
       <form
         onSubmit={submit}
         noValidate

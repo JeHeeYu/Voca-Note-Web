@@ -1,10 +1,18 @@
+import {
+  buildCrossword,
+  crosswordAnswer,
+  crosswordComplete,
+  crosswordInputs,
+  entryCells,
+  type CrosswordPuzzle,
+} from '../models/crossword'
 import { useRef, useState } from 'react'
 import type { ReviewAnswer, ReviewMode } from '@/shared/models/review'
 import type { SavedWord } from '@/shared/models/word'
 import { useVocaStore } from '@/shared/stores/vocaStore'
 import { errorMessage } from '@/shared/lib/errors'
 import {
-  answersMatch,
+  questionMatches,
   buildQuestions,
   gradeBatch,
   type ReviewPresentation,
@@ -13,6 +21,9 @@ import {
 } from '../models/reviewEngine'
 
 export function useReviewSession() {
+  const [crossword, setCrossword] = useState<CrosswordPuzzle | null>(null)
+  const [crosswordCells, setCrosswordCells] = useState<Record<string, string>>({})
+  const [startError, setStartError] = useState('')
   const [questions, setQuestions] = useState<ReviewQuestion[]>([])
   const [mode, setMode] = useState<ReviewMode>('recall')
   const [presentation, setPresentation] = useState<ReviewPresentation>('single')
@@ -39,7 +50,34 @@ export function useReviewSession() {
     nextPresentation: ReviewPresentation = presentation,
     scope: ReviewScope = 'all',
   ) => {
-    const next = buildQuestions(pool, nextMode, count, Date.now(), Math.random, targets, scope)
+    setStartError('')
+    const candidates = buildQuestions(
+      pool,
+      nextMode,
+      nextMode === 'crossword' ? 30 : count,
+      Date.now(),
+      Math.random,
+      targets,
+      scope,
+    )
+    const puzzle =
+      nextMode === 'crossword'
+        ? buildCrossword(
+            candidates.map((q) => ({ wordId: q.word.id, answer: q.answer })),
+            count,
+          )
+        : null
+    if (puzzle && !puzzle.entries.length) {
+      setStartError(
+        '서로 교차할 영어 단어가 부족해요. 공통 알파벳이 있는 단어를 추가하거나 다른 범위를 선택해 주세요.',
+      )
+      return
+    }
+    const next = puzzle
+      ? candidates.filter((q) => puzzle.entries.some((e) => e.wordId === q.word.id))
+      : candidates
+    setCrossword(puzzle)
+    setCrosswordCells({})
     if (!next.length) return
     sessionId.current = crypto.randomUUID()
     answeredQuestionId.current = ''
@@ -47,7 +85,9 @@ export function useReviewSession() {
     allowLeave.current = false
     setQuestions(next)
     setMode(nextMode)
-    setPresentation(nextMode === 'recall' ? 'single' : nextPresentation)
+    setPresentation(
+      nextMode === 'recall' ? 'single' : nextMode === 'crossword' ? 'batch' : nextPresentation,
+    )
     setBatchInputs({})
     setAnswers([])
     setInput('')
@@ -94,12 +134,17 @@ export function useReviewSession() {
   const check = (value = input) => {
     if (feedback || !current || !value.trim()) return
     setInput(value)
-    setFeedback({ correct: answersMatch(value, current.answer), input: value })
+    setFeedback({ correct: questionMatches(value, current, mode), input: value })
     setRevealed(true)
   }
   const checkBatch = () => {
     if (presentation !== 'batch' || phase !== 'active' || batchGraded.current) return
-    const results = gradeBatch(questions, batchInputs)
+    if (crossword && !crosswordComplete(crossword, crosswordCells)) return
+    const results = gradeBatch(
+      questions,
+      crossword ? crosswordInputs(crossword, crosswordCells) : batchInputs,
+      mode,
+    )
     if (!results) return
     batchGraded.current = true
     setAnswers(results)
@@ -108,6 +153,19 @@ export function useReviewSession() {
   }
   const incorrectIds = answers.filter((answer) => !answer.isCorrect).map((answer) => answer.wordId)
   return {
+    crossword,
+    crosswordCells,
+    startError,
+    fillCrossword: (wordId: string, value: string) => {
+      if (!crossword || phase !== 'active' || batchGraded.current) return
+      const entry = crossword.entries.find((e) => e.wordId === wordId)
+      const answer = crosswordAnswer(value)
+      if (!entry || answer.length !== entry.answer.length) return
+      setCrosswordCells((previous) => ({
+        ...previous,
+        ...Object.fromEntries(entryCells(entry).map(({ key }, i) => [key, answer[i]])),
+      }))
+    },
     mode,
     presentation,
     batchInputs,

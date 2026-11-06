@@ -1,3 +1,4 @@
+import CrosswordReview from '../components/CrosswordReview'
 import { useSearchParams } from 'react-router-dom'
 import LeaveGuard from '@/shared/components/LeaveGuard'
 import ReviewSetup from '../components/ReviewSetup'
@@ -14,7 +15,10 @@ export default function ReviewPage() {
   return (
     <>
       {session.phase === 'setup' ? (
-        <ReviewSetup key={scope} scope={scope} onStart={session.start} />
+        <ReviewSetup key={scope} scope={scope} error={session.startError} onStart={session.start} />
+      ) : session.mode === 'crossword' &&
+        (session.phase === 'active' || session.phase === 'graded') ? (
+        <CrosswordReview session={session} />
       ) : session.phase === 'graded' ||
         (session.phase === 'active' && session.presentation === 'batch') ? (
         <BatchReview session={session} />

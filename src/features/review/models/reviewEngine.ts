@@ -1,3 +1,4 @@
+import { crosswordAnswer } from './crossword'
 import {
   accuracy,
   isDue,
@@ -22,14 +23,38 @@ export interface ReviewQuestion {
 export const answersMatch = (input: string, answer: string) =>
   input.trim().toLowerCase() === answer.trim().toLowerCase()
 
+export const normalizeMeaningAnswer = (value: string) =>
+  value.normalize('NFKC').replace(/\s/gu, '').toLowerCase()
+export function meaningAnswersMatch(input: string, meanings: string[]) {
+  const value = normalizeMeaningAnswer(input)
+  return (
+    Boolean(value) &&
+    meanings.some((meaning) =>
+      [meaning, ...meaning.split(/[,，;；/\n]/u)].some(
+        (part) => normalizeMeaningAnswer(part) === value,
+      ),
+    )
+  )
+}
+export function questionMatches(input: string, question: ReviewQuestion, mode: ReviewMode) {
+  if (mode === 'meaning_writing')
+    return meaningAnswersMatch(
+      input,
+      wordMeanings(question.word).map((entry) => entry.meaning),
+    )
+  if (mode === 'crossword') return crosswordAnswer(input) === crosswordAnswer(question.answer)
+  return answersMatch(input, question.answer)
+}
+
 export function gradeBatch(
   questions: ReviewQuestion[],
   inputs: Record<string, string>,
+  mode: ReviewMode = 'writing',
 ): ReviewAnswer[] | null {
   if (!questions.length || questions.some(({ word }) => !inputs[word.id]?.trim())) return null
-  return questions.map(({ word, answer }) => ({
-    wordId: word.id,
-    isCorrect: answersMatch(inputs[word.id], answer),
+  return questions.map((question) => ({
+    wordId: question.word.id,
+    isCorrect: questionMatches(inputs[question.word.id], question, mode),
   }))
 }
 
@@ -52,6 +77,7 @@ export const eligibleReviewWords = (words: SavedWord[], targets: SavedWord[], mo
     (word) =>
       word.word.trim() &&
       wordMeanings(word).some((entry) => entry.meaning.trim()) &&
+      (mode !== 'crossword' || Boolean(crosswordAnswer(word.word))) &&
       (mode !== 'multiple_choice' || distractorsFor(word, words).length > 0),
   )
 
@@ -85,11 +111,12 @@ export function buildQuestions(
     )
   }
   return eligible.slice(0, Math.min(30, Math.max(0, count))).map((word) => {
-    const meaningMode = mode === 'recall' || mode === 'multiple_choice'
+    const meaningMode =
+      mode === 'recall' || mode === 'multiple_choice' || mode === 'meaning_writing'
     const meanings = wordMeanings(word).filter((entry) => entry.meaning.trim())
     const selected = meanings[Math.floor(random() * meanings.length)]
     const answer = (
-      mode === 'recall'
+      mode === 'recall' || mode === 'meaning_writing'
         ? meaningText(word)
         : mode === 'multiple_choice'
           ? selected.meaning
@@ -104,7 +131,7 @@ export function buildQuestions(
       prompt:
         mode === 'listening' ? '어떤 단어가 들리나요?' : meaningMode ? word.word : selected.meaning,
       context:
-        mode === 'listening'
+        mode === 'listening' || mode === 'meaning_writing' || mode === 'crossword'
           ? ''
           : mode === 'multiple_choice'
             ? word.example || word.note

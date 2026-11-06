@@ -97,7 +97,11 @@ export default function BatchReviewQuestion({
               <input
                 id={inputId}
                 className="field"
-                placeholder="영어 단어를 입력하세요"
+                placeholder={
+                  mode === 'meaning_writing'
+                    ? '한글 뜻 하나를 입력하세요'
+                    : '영어 단어를 입력하세요'
+                }
                 value={value}
                 onChange={(event) => onChange(event.target.value)}
                 readOnly={graded}

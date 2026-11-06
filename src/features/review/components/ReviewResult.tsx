@@ -63,7 +63,14 @@ export default function ReviewResult({
           {remaining.length ? (
             <button
               disabled={!session.saved || session.saving}
-              onClick={() => session.start(words, remaining, session.mode, remaining.length)}
+              onClick={() =>
+                session.start(
+                  words,
+                  remaining,
+                  session.mode === 'crossword' ? 'writing' : session.mode,
+                  remaining.length,
+                )
+              }
               className="btn btn-primary"
             >
               <RotateCcw size={16} />

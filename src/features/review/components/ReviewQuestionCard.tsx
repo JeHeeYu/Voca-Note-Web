@@ -18,7 +18,8 @@ export default function ReviewQuestionCard({
   const checked = Boolean(feedback)
   useEffect(() => {
     if (checked) nextButton.current?.focus({ preventScroll: true })
-    else if (mode === 'writing' || mode === 'listening') input.current?.focus()
+    else if (mode === 'writing' || mode === 'listening' || mode === 'meaning_writing')
+      input.current?.focus()
     else heading.current?.focus()
   }, [current?.word.id, mode, checked])
   if (!current) return null
@@ -59,7 +60,9 @@ export default function ReviewQuestionCard({
                 ? 'Choose the right meaning'
                 : mode === 'writing'
                   ? 'Find the right word'
-                  : 'Listen carefully'}
+                  : mode === 'meaning_writing'
+                    ? 'Write one meaning'
+                    : 'Listen carefully'}
           </p>
           {mode === 'listening' ? (
             <div className="mb-6">
@@ -114,16 +117,25 @@ export default function ReviewQuestionCard({
               ))}
             </div>
           ) : null}
-          {mode === 'writing' || mode === 'listening' ? (
+          {mode === 'writing' || mode === 'listening' || mode === 'meaning_writing' ? (
             <form onSubmit={submit} className="mx-auto mt-8 max-w-sm">
+              {mode === 'meaning_writing' ? (
+                <p className="mb-3 text-xs leading-6 text-muted">
+                  띄어쓰기는 무시해요. 등록된 뜻 중 하나만 맞히면 정답이에요.
+                </p>
+              ) : null}
               <label htmlFor="review-answer" className="sr-only">
-                영어 단어 입력
+                {mode === 'meaning_writing' ? '한글 뜻 입력' : '영어 단어 입력'}
               </label>
               <input
                 id="review-answer"
                 ref={input}
                 className="field text-center text-lg"
-                placeholder="영어 단어를 입력하세요"
+                placeholder={
+                  mode === 'meaning_writing'
+                    ? '한글 뜻 하나를 입력하세요'
+                    : '영어 단어를 입력하세요'
+                }
                 value={session.input}
                 onChange={(event) => session.setInput(event.target.value)}
                 disabled={Boolean(feedback)}

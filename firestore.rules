@@ -123,7 +123,7 @@ service cloud.firestore {
           'wordIds',
           'completedAt'
         ])
-        && data.mode in ['recall', 'multiple_choice', 'writing', 'listening']
+        && data.mode in ['recall', 'multiple_choice', 'writing', 'listening', 'meaning_writing', 'crossword']
         && data.questionCount is int
         && data.questionCount >= 1
         && data.questionCount <= 30

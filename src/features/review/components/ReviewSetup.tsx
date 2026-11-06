@@ -1,6 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Layers, ListChecks, PencilLine, Headphones, Lightbulb } from 'lucide-react'
+import {
+  ArrowRight,
+  Layers,
+  ListChecks,
+  PencilLine,
+  Headphones,
+  Lightbulb,
+  Languages,
+  Puzzle,
+} from 'lucide-react'
 import { useVocaStore } from '@/shared/stores/vocaStore'
 import { useAuthStore } from '@/features/auth/stores/authStore'
 import { isDue, needsPractice, type SavedWord } from '@/shared/models/word'
@@ -21,11 +30,15 @@ const icons = {
   multiple_choice: ListChecks,
   writing: PencilLine,
   listening: Headphones,
+  meaning_writing: Languages,
+  crossword: Puzzle,
 }
 export default function ReviewSetup({
   scope: initialScope,
   onStart,
+  error,
 }: {
+  error: string
   scope: ReviewScope
   onStart: (
     words: SavedWord[],
@@ -63,7 +76,7 @@ export default function ReviewSetup({
         <div className="card">
           <EmptyState
             title="연습할 단어를 먼저 담아주세요."
-            description="단어와 뜻을 기록하면 네 가지 방식으로 학습할 수 있어요."
+            description="단어와 뜻을 기록하면 다양한 방식으로 학습할 수 있어요."
             action={
               <Link to="/words/new" className="btn btn-primary">
                 첫 단어 추가
@@ -74,40 +87,42 @@ export default function ReviewSetup({
       ) : (
         <div className="grid items-start gap-6 xl:grid-cols-[1.6fr_1fr]">
           <div>
-            <div className="card mb-5 p-5">
-              <h2 className="mb-3 text-sm font-semibold">어떻게 풀까요?</h2>
-              <div className="grid grid-cols-2 gap-3" role="group" aria-label="진행 방식">
-                {(
-                  [
-                    { value: 'single', label: '한 문제씩', description: '답을 확인하며 차근차근' },
-                    {
-                      value: 'batch',
-                      label: '한 번에 풀기',
-                      description: '모두 입력하고 일괄 채점',
-                    },
-                  ] as const
-                ).map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={presentation === option.value}
-                    className={`rounded-xl border p-4 text-left ${presentation === option.value ? 'border-brand bg-brand-soft text-brand' : 'border-line text-muted'}`}
-                    onClick={() => {
-                      setPresentation(option.value)
-                      if (option.value === 'batch' && mode === 'recall') setMode('writing')
-                    }}
-                  >
-                    <span className="block text-sm font-semibold">{option.label}</span>
-                    <span className="mt-1 block text-xs leading-5">{option.description}</span>
-                  </button>
-                ))}
+            {mode !== 'crossword' ? (
+              <div className="card mb-5 p-5">
+                <h2 className="mb-3 text-sm font-semibold">어떻게 풀까요?</h2>
+                <div className="grid grid-cols-2 gap-3" role="group" aria-label="진행 방식">
+                  {(
+                    [
+                      {
+                        value: 'single',
+                        label: '한 문제씩',
+                        description: '답을 확인하며 차근차근',
+                      },
+                      {
+                        value: 'batch',
+                        label: '한 번에 풀기',
+                        description: '모두 입력하고 일괄 채점',
+                      },
+                    ] as const
+                  ).map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={presentation === option.value}
+                      className={`rounded-xl border p-4 text-left ${presentation === option.value ? 'border-brand bg-brand-soft text-brand' : 'border-line text-muted'}`}
+                      onClick={() => {
+                        setPresentation(option.value)
+                        if (option.value === 'batch' && mode === 'recall') setMode('writing')
+                      }}
+                    >
+                      <span className="block text-sm font-semibold">{option.label}</span>
+                      <span className="mt-1 block text-xs leading-5">{option.description}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div
-              className={`grid gap-4 ${presentation === 'batch' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}
-              role="group"
-              aria-label="연습 방식"
-            >
+            ) : null}
+            <div className={`grid gap-4 sm:grid-cols-2`} role="group" aria-label="연습 방식">
               {(Object.entries(REVIEW_MODES) as [ReviewMode, (typeof REVIEW_MODES)[ReviewMode]][])
                 .filter(([key]) => presentation === 'single' || key !== 'recall')
                 .map(([key, value]) => {
@@ -248,9 +263,25 @@ export default function ReviewSetup({
                   : '뜻 고르기는 오답 선택지로 쓸 다른 뜻의 단어가 필요해요.'}
               </p>
             ) : null}
+            {mode === 'crossword' ? (
+              <p className="mt-3 text-xs leading-6 text-muted">
+                영문 2~18글자로 연결 가능한 단어만 출제해요. 공백·하이픈·아포스트로피는 칸에서
+                생략하며, 실제 문제 수는 줄어들 수 있어요.
+              </p>
+            ) : null}
+            {error ? (
+              <p role="alert" className="mt-3 text-sm text-red-600">
+                {error}
+              </p>
+            ) : null}
             <button
               disabled={
-                !validCount || !eligible.length || unsupported || unavailable || (!online && !demo)
+                !validCount ||
+                !eligible.length ||
+                (mode === 'crossword' && eligible.length < 2) ||
+                unsupported ||
+                unavailable ||
+                (!online && !demo)
               }
               onClick={() => onStart(words, targets, mode, requestedCount, presentation, scope)}
               className="btn btn-primary mt-6 w-full"

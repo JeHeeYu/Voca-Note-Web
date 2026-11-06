@@ -33,6 +33,28 @@ const dbFor = (uid: string) =>
   environment.authenticatedContext(uid).firestore() as unknown as Firestore
 
 describe('shared Firebase data contract and rules', () => {
+  it.each(['meaning_writing', 'crossword'] as const)(
+    'persists %s sessions atomically and only once',
+    async (mode) => {
+      const db = dbFor('alice'),
+        repository = createFirestoreRepository(db, 'alice')
+      const id = await repository.saveWord({
+        ...emptyDraft(),
+        word: 'record',
+        meaning: '기록, 음반',
+      })
+      await repository.saveSession('game-session', mode, [{ wordId: id, isCorrect: true }])
+      await repository.saveSession('game-session', mode, [{ wordId: id, isCorrect: true }])
+      expect(
+        (await getDoc(doc(db, 'users/alice/reviewSessions/game-session'))).data(),
+      ).toMatchObject({ mode, questionCount: 1, correctCount: 1 })
+      expect((await getDoc(doc(db, 'users/alice/words', id))).data()).toMatchObject({
+        correctCount: 1,
+        reviewStreak: 1,
+      })
+      await assertFails(getDoc(doc(dbFor('bob'), 'users/alice/reviewSessions/game-session')))
+    },
+  )
   it('creates, edits, subscribes to, and deletes a word without losing app review state', async () => {
     const db = dbFor('alice'),
       repository = createFirestoreRepository(db, 'alice')

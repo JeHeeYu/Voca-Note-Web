@@ -1,4 +1,5 @@
-export type ReviewMode = 'recall' | 'multiple_choice' | 'writing' | 'listening'
+export type ReviewMode =
+  'recall' | 'multiple_choice' | 'writing' | 'listening' | 'meaning_writing' | 'crossword'
 export interface ReviewSettings {
   sessionSize: number
   dailyGoal: number
@@ -35,6 +36,16 @@ export const REVIEW_MODES: Record<
     label: '직접 쓰기',
     description: '뜻과 예문을 보고 영어 단어를 써요.',
     english: 'Write it down',
+  },
+  meaning_writing: {
+    label: '한글 뜻 맞히기',
+    description: '영어를 보고 뜻 하나를 써요. 띄어쓰기는 자유롭게.',
+    english: 'Write the meaning',
+  },
+  crossword: {
+    label: '가로세로 낱말',
+    description: '한글 힌트로 교차하는 영어 낱말을 채워요.',
+    english: 'Crossword',
   },
   listening: {
     label: '듣고 쓰기',

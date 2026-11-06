@@ -76,6 +76,36 @@ try {
   await page.getByRole('button', { name: '전체 정답 확인', exact: true }).click()
   await page.getByText('학습 기록과 다음 복습 시간을 저장했어요.').waitFor()
   await capture('worksheet-results')
+  await menu('오늘의 학습')
+  await menu('단어 연습')
+  await page
+    .getByRole('button')
+    .filter({ has: page.getByRole('heading', { name: '한글 뜻 맞히기', exact: true }) })
+    .click()
+  await page.getByRole('button', { name: '연습 시작하기' }).click()
+  await page.getByLabel('한글 뜻 입력').fill('')
+  await capture('meaning-quiz')
+  await page
+    .getByRole('navigation', { name: '메인 메뉴', exact: true })
+    .getByRole('link', { name: '오늘의 학습' })
+    .click()
+  await page.getByRole('button', { name: '나가기', exact: true }).click()
+  await menu('단어 연습')
+  await page
+    .getByRole('button')
+    .filter({ has: page.getByRole('heading', { name: '가로세로 낱말', exact: true }) })
+    .click()
+  await page.getByRole('button', { name: '5문제', exact: true }).click()
+  await page.getByRole('button', { name: '연습 시작하기' }).click()
+  const clues = page.locator('[data-word-id]')
+  for (let index = 0; index < Math.min(2, await clues.count()); index++) {
+    const clue = clues.nth(index)
+    const id = await clue.getAttribute('data-word-id')
+    await clue.click()
+    await page.getByLabel('선택한 낱말 입력').fill(stored.words.find((word) => word.id === id).word)
+    await page.getByRole('button', { name: '낱말 채우기' }).click()
+  }
+  await capture('crossword')
   console.log(`Saved demo screenshots to ${output}`)
 } finally {
   await browser.close()
