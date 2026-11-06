@@ -25,16 +25,16 @@ export const answersMatch = (input: string, answer: string) =>
 
 export const normalizeMeaningAnswer = (value: string) =>
   value.normalize('NFKC').replace(/\s/gu, '').toLowerCase()
+const meaningAlternatives = (value: string) =>
+  value
+    .normalize('NFKC')
+    .split(/[,;/\n]/u)
+    .map(normalizeMeaningAnswer)
+    .filter(Boolean)
 export function meaningAnswersMatch(input: string, meanings: string[]) {
-  const value = normalizeMeaningAnswer(input)
-  return (
-    Boolean(value) &&
-    meanings.some((meaning) =>
-      [meaning, ...meaning.split(/[,，;；/\n]/u)].some(
-        (part) => normalizeMeaningAnswer(part) === value,
-      ),
-    )
-  )
+  const answers = meaningAlternatives(input)
+  const accepted = new Set(meanings.flatMap(meaningAlternatives))
+  return answers.length > 0 && answers.every((answer) => accepted.has(answer))
 }
 export function questionMatches(input: string, question: ReviewQuestion, mode: ReviewMode) {
   if (mode === 'meaning_writing')

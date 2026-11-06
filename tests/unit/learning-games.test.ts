@@ -34,6 +34,25 @@ const record: SavedWord = {
 }
 
 describe('Korean meaning answers', () => {
+  it('accepts one or more registered meanings in any order across stored senses', () => {
+    for (const meanings of [['보상금, 보상'], ['보상금', '보상']]) {
+      for (const answer of [
+        '보상',
+        '보상금',
+        '보상, 보상금',
+        '보 상 금, 보 상',
+        '보상；보상금',
+        '보상／보상금',
+        '보상\n보상금',
+        '보상, 보상, 보상금, ',
+      ])
+        expect(meaningAnswersMatch(answer, meanings), answer).toBe(true)
+      for (const answer of [', ; /\n', '보', '보상, 오답', '보상금액', '보상보상금'])
+        expect(meaningAnswersMatch(answer, meanings), answer).toBe(false)
+    }
+    expect(meaningAnswersMatch('보상, 보상금', ['보상금, 보상, 배상'])).toBe(true)
+    expect(meaningAnswersMatch('보상, 보상금', [])).toBe(false)
+  })
   it('accepts any stored meaning or separated alternative, ignoring Unicode whitespace', () => {
     const meanings = ['기록, 음반', '기록하다', '잘 자라다; 번창하다', '관점/시각']
     for (const answer of [
