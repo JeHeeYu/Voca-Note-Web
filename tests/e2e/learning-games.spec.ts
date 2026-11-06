@@ -55,6 +55,43 @@ const saved = (page: Page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem('voca-note:demo:v1')!).sessions)
 
 for (const presentation of ['single', 'batch'] as const) {
+  test(`Korean meaning ${presentation} accepts omitted parenthetical notes and preserves the definition`, async ({
+    page,
+  }) => {
+    const meaning = '(조건을) 충족시키다'
+    await setup(page, [
+      {
+        ...words[0],
+        id: 'fulfill',
+        word: 'fulfill',
+        meaning,
+        meanings: presentation === 'single' ? [] : [{ meaning, partOfSpeech: 'verb' }],
+      },
+    ])
+    if (presentation === 'batch') await page.getByRole('button', { name: /한 번에 풀기/ }).click()
+    await mode(page, '한글 뜻 맞히기')
+    await page.getByRole('button', { name: '연습 시작하기' }).click()
+    await page
+      .getByLabel(presentation === 'single' ? '한글 뜻 입력' : '1번 답', { exact: true })
+      .fill('충족시키다')
+    if (presentation === 'single') {
+      await page.getByRole('button', { name: '정답 확인', exact: true }).click()
+      await expect(page.getByText('정확해요. 잘 기억하고 있어요!')).toBeVisible()
+      await page.keyboard.press('Enter')
+    } else {
+      await page.getByRole('button', { name: '전체 정답 확인', exact: true }).click()
+      await expect(page.getByRole('heading', { name: '1문제 중 1문제 정답' })).toBeVisible()
+    }
+    await expect(page.getByText('학습 기록과 다음 복습 시간을 저장했어요.')).toBeVisible()
+    expect(await saved(page)).toMatchObject([
+      { mode: 'meaning_writing', questionCount: 1, correctCount: 1 },
+    ])
+    const storedMeaning = await page.evaluate(
+      () => JSON.parse(localStorage.getItem('voca-note:demo:v1')!).words[0].meaning,
+    )
+    expect(storedMeaning).toBe(meaning)
+  })
+
   test(`Korean meaning ${presentation} accepts reordered compensation meanings and saves a correct answer`, async ({
     page,
   }) => {

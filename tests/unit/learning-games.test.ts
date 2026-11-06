@@ -34,6 +34,44 @@ const record: SavedWord = {
 }
 
 describe('Korean meaning answers', () => {
+  it('treats balanced parenthetical notes as optional before splitting meanings', () => {
+    for (const meaning of [
+      '(조건을) 충족시키다',
+      '（조건을） 충족시키다',
+      '(조건, 기준/요건을) 충족시키다',
+      '(주로 (조건을)) 충족시키다',
+      '충족(기준을)시키다(동사)',
+    ]) {
+      for (const input of ['충족시키다', '충족 시키다', '(조건을) 충족시키다', meaning])
+        expect(meaningAnswersMatch(input, [meaning]), `${input} / ${meaning}`).toBe(true)
+      for (const input of ['', '(조건을)', '(충족시키다)', '조건', '기준', '충족', '오답'])
+        expect(meaningAnswersMatch(input, [meaning]), input).toBe(false)
+    }
+    expect(
+      meaningAnswersMatch('충족시키다, 만족시키다', ['(사람을) 만족시키다, (조건을) 충족시키다']),
+    ).toBe(true)
+    expect(meaningAnswersMatch('충족시키다, 오답', ['(조건을) 충족시키다'])).toBe(false)
+    expect(meaningAnswersMatch('', ['(참고)'])).toBe(false)
+    expect(meaningAnswersMatch('(참고)', ['(참고)'])).toBe(false)
+    expect(meaningAnswersMatch('충족시키다', ['충족시키다(조건'])).toBe(false)
+    expect(meaningAnswersMatch('충족시키다(조건', ['충족시키다(조건'])).toBe(true)
+  })
+  it('grades omitted notes in single and batch without changing the stored meaning', () => {
+    for (const meanings of [
+      [],
+      [{ meaning: '(조건을) 충족시키다', partOfSpeech: 'verb' as const }],
+    ]) {
+      const word = { ...record, meaning: '(조건을) 충족시키다', meanings }
+      const before = JSON.stringify(word)
+      const [question] = buildQuestions([word], 'meaning_writing', 1)
+      expect(questionMatches('충족시키다', question, 'meaning_writing')).toBe(true)
+      expect(gradeBatch([question], { record: '충족시키다' }, 'meaning_writing')).toEqual([
+        { wordId: 'record', isCorrect: true },
+      ])
+      expect(question.answer).toBe('(조건을) 충족시키다')
+      expect(JSON.stringify(word)).toBe(before)
+    }
+  })
   it('accepts one or more registered meanings in any order across stored senses', () => {
     for (const meanings of [['보상금, 보상'], ['보상금', '보상']]) {
       for (const answer of [

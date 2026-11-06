@@ -25,6 +25,25 @@ export const answersMatch = (input: string, answer: string) =>
 
 export const normalizeMeaningAnswer = (value: string) =>
   value.normalize('NFKC').replace(/\s/gu, '').toLowerCase()
+function withoutMeaningNotes(value: string) {
+  const text = value.normalize('NFKC')
+  let result = ''
+  let depth = 0
+  let start = 0
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    if (char === '(') {
+      if (depth === 0) start = i
+      depth++
+    } else if (char === ')' && depth > 0) {
+      depth--
+    } else if (depth === 0) {
+      result += char
+    }
+  }
+  // An unmatched opening parenthesis must not hide the rest of an answer.
+  return depth > 0 ? result + text.slice(start) : result
+}
 const meaningAlternatives = (value: string) =>
   value
     .normalize('NFKC')
@@ -32,14 +51,16 @@ const meaningAlternatives = (value: string) =>
     .map(normalizeMeaningAnswer)
     .filter(Boolean)
 export function meaningAnswersMatch(input: string, meanings: string[]) {
-  const answers = meaningAlternatives(input)
+  const answer = withoutMeaningNotes(input)
+  const answers = meaningAlternatives(answer)
   const accepted = new Set(
     meanings
+      .map(withoutMeaningNotes)
       .flatMap((meaning) => [normalizeMeaningAnswer(meaning), ...meaningAlternatives(meaning)])
       .filter(Boolean),
   )
   return (
-    accepted.has(normalizeMeaningAnswer(input)) ||
+    accepted.has(normalizeMeaningAnswer(answer)) ||
     (answers.length > 0 && answers.every((answer) => accepted.has(answer)))
   )
 }
