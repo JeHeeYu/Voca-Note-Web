@@ -33,8 +33,15 @@ const meaningAlternatives = (value: string) =>
     .filter(Boolean)
 export function meaningAnswersMatch(input: string, meanings: string[]) {
   const answers = meaningAlternatives(input)
-  const accepted = new Set(meanings.flatMap(meaningAlternatives))
-  return answers.length > 0 && answers.every((answer) => accepted.has(answer))
+  const accepted = new Set(
+    meanings
+      .flatMap((meaning) => [normalizeMeaningAnswer(meaning), ...meaningAlternatives(meaning)])
+      .filter(Boolean),
+  )
+  return (
+    accepted.has(normalizeMeaningAnswer(input)) ||
+    (answers.length > 0 && answers.every((answer) => accepted.has(answer)))
+  )
 }
 export function questionMatches(input: string, question: ReviewQuestion, mode: ReviewMode) {
   if (mode === 'meaning_writing')

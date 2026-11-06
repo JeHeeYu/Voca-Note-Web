@@ -60,12 +60,15 @@ describe('Korean meaning answers', () => {
       '음\t반',
       '기록 하다',
       '잘\u00a0자라다',
+      '잘\n자라다',
       '번창하다',
       '시각',
       '기록,음반',
     ])
       expect(meaningAnswersMatch(answer, meanings)).toBe(true)
     expect(meaningAnswersMatch('기록하다'.normalize('NFD'), meanings)).toBe(true)
+    expect(meaningAnswersMatch('잘 자라다', ['잘\n자라다'])).toBe(true)
+    expect(meaningAnswersMatch('', [' ', ','])).toBe(false)
     for (const answer of ['', ' \n ', '기록하', '잘', '오답, 음반', '기록합니다'])
       expect(meaningAnswersMatch(answer, meanings)).toBe(false)
   })
